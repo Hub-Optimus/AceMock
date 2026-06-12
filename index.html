@@ -270,8 +270,74 @@ a{color:var(--indigo);text-decoration:none}
 .m-chip:hover{transform:scale(1.08)}
 .modal-actions{display:flex;gap:10px;justify-content:flex-end}
 
-/* ── Micro-interactions ── */
-.opt-card{transition:all .15s,transform .12s}
+/* ── Auth (login / signup) ── */
+#s-auth{background:var(--bg);align-items:center;justify-content:center;padding:32px 20px}
+.auth-card{width:100%;max-width:400px}
+.auth-tagline{font-size:13.5px;color:var(--text2);margin-bottom:22px;line-height:1.55}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:11.5px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.3px;margin-bottom:5px}
+.field input{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;color:var(--text);background:var(--bg2);outline:none;transition:border .15s}
+.field input:focus{border-color:var(--indigo)}
+.auth-actions{display:flex;gap:10px;margin-top:16px}
+.auth-actions button{flex:1;padding:12px;border-radius:10px;font-size:14px;font-weight:600}
+.auth-primary{background:var(--indigo);color:#fff;border:none}
+.auth-primary:hover{background:#4338ca}
+.auth-secondary{background:var(--bg);color:var(--indigo);border:1.5px solid var(--indigo)}
+.auth-secondary:hover{background:var(--indigo-l)}
+.auth-msg{margin-top:14px;padding:11px 14px;border-radius:9px;font-size:12.5px;line-height:1.55;display:none}
+.auth-msg.ok{display:block;background:var(--green-l);border:1px solid var(--green-b);color:#047857}
+.auth-msg.err{display:block;background:var(--red-l);border:1px solid var(--red-b);color:var(--red)}
+.auth-guest{margin-top:16px;text-align:center;font-size:12.5px;color:var(--text3)}
+.auth-guest a{cursor:pointer;font-weight:600}
+.user-chip{margin-left:8px;display:none;align-items:center;gap:8px;font-size:12px;color:var(--text2);background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:5px 6px 5px 12px}
+.user-chip.show{display:inline-flex}
+.user-chip b{color:var(--text);font-weight:600;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip-out{border:none;background:var(--bg3);color:var(--text2);border-radius:14px;padding:4px 10px;font-size:11px;font-weight:600}
+.chip-out:hover{background:var(--red-l);color:var(--red)}
+
+/* ── History (Supabase) ── */.hist-link{margin-left:auto;padding:7px 14px;border-radius:9px;font-size:12.5px;font-weight:600;border:1.5px solid var(--border);color:var(--text2);background:var(--bg);display:none}
+.hist-link.show{display:inline-flex;align-items:center;gap:6px}
+.hist-link:hover{border-color:var(--indigo);color:var(--indigo)}
+#s-history{background:var(--bg2);padding:0}
+.hist-scroll{flex:1;overflow-y:auto;padding:28px 32px;max-width:900px;margin:0 auto;width:100%}
+.hist-top{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.hist-title{font-size:19px;font-weight:700;color:var(--text)}
+.hist-empty{padding:40px 20px;text-align:center;color:var(--text3);font-size:13.5px;background:var(--bg);border:1.5px dashed var(--border);border-radius:12px}
+.hist-card{display:flex;align-items:center;gap:14px;padding:14px 16px;border:1.5px solid var(--border);border-radius:12px;background:var(--bg);margin-bottom:10px;transition:all .15s}
+.hist-card:hover{border-color:var(--indigo-b);box-shadow:0 4px 14px rgba(15,23,42,.06)}
+.hist-pct{width:54px;height:54px;min-width:54px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:700;font-size:15px;line-height:1.1}
+.hist-pct span{font-size:9px;font-weight:600;opacity:.8}
+.hp-good{background:var(--green-l);color:var(--green);border:1px solid var(--green-b)}
+.hp-mid{background:var(--amber-l);color:#b45309;border:1px solid var(--amber-b)}
+.hp-low{background:var(--red-l);color:var(--red);border:1px solid var(--red-b)}
+.hist-info{flex:1;min-width:0}
+.hist-name{font-size:13.5px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hist-meta{font-size:11.5px;color:var(--text3);margin-top:2px}
+.hist-actions{display:flex;gap:8px}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--text);color:#fff;padding:10px 18px;border-radius:10px;font-size:13px;font-weight:500;z-index:60;transition:transform .3s cubic-bezier(.34,1.4,.64,1);box-shadow:0 10px 30px rgba(15,23,42,.3)}
+.toast.show{transform:translateX(-50%) translateY(0)}
+
+/* ── Section split panel ── */.parts-panel{margin-top:16px;display:none}
+.parts-panel.show{display:block;animation:qfade .25s ease}
+.parts-head{font-size:11.5px;font-weight:600;color:var(--text2);letter-spacing:.3px;text-transform:uppercase;margin-bottom:4px}
+.parts-sub{font-size:12px;color:var(--text3);margin-bottom:10px;line-height:1.5}
+.parts-grid{display:flex;flex-direction:column;gap:8px}
+.part-card{display:flex;align-items:center;gap:12px;padding:11px 14px;border:1.5px solid var(--border);border-radius:11px;background:var(--bg);transition:all .15s}
+.part-card:hover{border-color:var(--indigo-b);transform:translateX(2px)}
+.part-card.done{border-color:var(--green-b);background:var(--green-l)}
+.part-card.next{border-color:var(--indigo);box-shadow:0 0 0 3px var(--indigo-l)}
+.part-num{width:30px;height:30px;min-width:30px;border-radius:8px;background:var(--indigo-l);color:var(--indigo);font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.part-card.done .part-num{background:var(--green);color:#fff}
+.part-info{flex:1;min-width:0}
+.part-name{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.part-meta{font-size:11px;color:var(--text3);margin-top:1px}
+.part-score{font-size:11.5px;font-weight:700;color:var(--green);white-space:nowrap}
+.part-btn{padding:7px 14px;border-radius:8px;font-size:12px;font-weight:600;border:1.5px solid var(--indigo);color:var(--indigo);background:var(--bg);white-space:nowrap}
+.part-btn:hover{background:var(--indigo);color:#fff}
+.part-card.done .part-btn{border-color:var(--green);color:var(--green)}
+.part-card.done .part-btn:hover{background:var(--green);color:#fff}
+
+/* ── Micro-interactions ── */.opt-card{transition:all .15s,transform .12s}
 .opt-card:active{transform:scale(.985)}
 .opt-card:hover{transform:translateX(3px)}
 .gen-btn:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(79,70,229,.28)}
@@ -286,9 +352,38 @@ a{color:var(--indigo);text-decoration:none}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
 <body>
 <div class="shell">
+
+<!-- ═══ SCREEN 0: LOGIN / SIGNUP ═══ -->
+<div class="screen" id="s-auth">
+  <div class="auth-card">
+    <div class="setup-logo">
+      <div class="logo-mark">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      </div>
+      <span class="logo-name">AceMock</span>
+      <span class="logo-badge">AI EXAM PREP</span>
+    </div>
+    <p class="auth-tagline">Log in so every attempt is saved to your history — revise any past paper anytime.</p>
+    <div class="field">
+      <label for="auth-email">Email</label>
+      <input id="auth-email" type="email" placeholder="you@example.com" autocomplete="email">
+    </div>
+    <div class="field">
+      <label for="auth-pass">Password</label>
+      <input id="auth-pass" type="password" placeholder="Minimum 6 characters" autocomplete="current-password">
+    </div>
+    <div class="auth-actions">
+      <button class="auth-primary" id="login-btn" onclick="doLogin()">Log in</button>
+      <button class="auth-secondary" id="signup-btn" onclick="doSignup()">Create account</button>
+    </div>
+    <div class="auth-msg" id="auth-msg"></div>
+    <div class="auth-guest">or <a onclick="continueGuest()">continue without an account</a> — attempts won't be saved</div>
+  </div>
+</div>
 
 <!-- ═══ SCREEN 1: SETUP ═══ -->
 <div class="screen active" id="s-setup">
@@ -299,6 +394,11 @@ a{color:var(--indigo);text-decoration:none}
       </div>
       <span class="logo-name">AceMock</span>
       <span class="logo-badge">AI EXAM PREP</span>
+      <button class="hist-link" id="hist-link" onclick="openHistory()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Past attempts
+      </button>
+      <span class="user-chip" id="user-chip"><b id="user-email"></b><button class="chip-out" onclick="doSignOut()">Sign out</button></span>
     </div>
     <p class="setup-tagline">Paste any lecture transcript or notes — get a timed MCQ/MSQ/NAT mock paper with detailed review.</p>
 
@@ -322,6 +422,12 @@ a{color:var(--indigo);text-decoration:none}
     <textarea class="paste-area" id="content" rows="6" placeholder="Paste your lecture transcript, module notes, or any study material here...
 
 Works with any text — lecture notes, PDF content, chapter summaries. Minimum 30 real words needed."></textarea>
+
+    <div class="parts-panel" id="parts-panel">
+      <div class="parts-head">Sections — full document coverage</div>
+      <div class="parts-sub" id="parts-sub"></div>
+      <div class="parts-grid" id="parts-grid"></div>
+    </div>
 
     <div class="config-grid">
       <div class="cfg-block">
@@ -366,7 +472,7 @@ Works with any text — lecture notes, PDF content, chapter summaries. Minimum 3
       </div>
     </div>
 
-    <button class="gen-btn" id="gen-btn" onclick="startGeneration()">
+    <button class="gen-btn" id="gen-btn" onclick="generateNext()">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
       Generate exam paper
     </button>
@@ -382,7 +488,7 @@ Works with any text — lecture notes, PDF content, chapter summaries. Minimum 3
 <div class="screen" id="s-loading">
   <div class="loading-inner">
     <div class="spin-ring"></div>
-    <div class="load-title">Generating your exam paper</div>
+    <div class="load-title" id="load-title">Generating your exam paper</div>
     <div class="load-msg" id="load-msg">Reading your content...</div>
     <div class="load-steps">
       <div class="load-dot active" id="dot0"></div>
@@ -458,7 +564,20 @@ Works with any text — lecture notes, PDF content, chapter summaries. Minimum 3
   </div>
 </div>
 
+<!-- ═══ SCREEN 5: HISTORY ═══ -->
+<div class="screen" id="s-history">
+  <div class="hist-scroll">
+    <div class="hist-top">
+      <button class="nav-btn" onclick="show('s-setup')">← Back</button>
+      <span class="hist-title">Past attempts</span>
+    </div>
+    <div id="hist-list"></div>
+  </div>
+</div>
+
 </div><!-- .shell -->
+
+<div class="toast" id="toast"></div>
 
 <!-- ═══ SUBMIT SUMMARY MODAL ═══ -->
 <div class="veil" id="veil" onclick="if(event.target===this)closeModal()">
@@ -487,6 +606,130 @@ let timerInt  = null;
 let startMs   = 0;
 let lastTimeMins = 30;
 let activeTypes = new Set(['MCQ','MSQ','NAT']);
+let currentSectionTitle = '';
+let viewingHistory = false;
+
+// ── Supabase (attempt history) ───────────────────────
+// Paste your project values below. Get them from:
+// supabase.com → your project → Settings → API
+// Leave both empty to run without history (everything else still works).
+const SUPABASE_URL = 'https://dkelsqxwbqbairckngtt.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRrZWxzcXh3YnFiYWlyY2tuZ2d0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyODM1MDEsImV4cCI6MjA5Njg1OTUwMX0.WAnmiFKgpBGN3HES5y29jX3XOpHhFpgo2LiCc_Qg9Ro';
+const sb = (SUPABASE_URL.startsWith('https://') && SUPABASE_ANON_KEY.length > 20)
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  : null;
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+// ── Auth: email signup with verification + login ─────
+let currentUser = null;
+let guestMode = false;
+let savePromptShown = false;
+
+function authMsg(text, kind) {
+  const m = document.getElementById('auth-msg');
+  m.textContent = text;
+  m.className = 'auth-msg ' + (kind || 'err');
+}
+
+function handleSession(session) {
+  currentUser = session ? session.user : null;
+  const chip = document.getElementById('user-chip');
+  const hist = document.getElementById('hist-link');
+  if (currentUser) {
+    document.getElementById('user-email').textContent = currentUser.email;
+    chip.classList.add('show');
+    if (sb) hist.classList.add('show');
+    if (document.getElementById('s-auth').classList.contains('active')) show('s-setup');
+  } else {
+    chip.classList.remove('show');
+    hist.classList.remove('show');
+  }
+}
+
+async function initAuth() {
+  if (!sb) { show('s-setup'); return; }
+  const { data: { session } } = await sb.auth.getSession();
+  handleSession(session);
+  if (!session && !guestMode) show('s-auth');
+  else if (!document.getElementById('s-quiz').classList.contains('active')) show('s-setup');
+  sb.auth.onAuthStateChange((_event, s) => handleSession(s));
+}
+
+async function doSignup() {
+  const email = document.getElementById('auth-email').value.trim();
+  const pass = document.getElementById('auth-pass').value;
+  if (!/.+@.+\..+/.test(email)) return authMsg('Enter a valid email address.');
+  if (pass.length < 6) return authMsg('Password must be at least 6 characters.');
+  const btn = document.getElementById('signup-btn');
+  btn.disabled = true; btn.textContent = 'Creating…';
+  try {
+    const { data, error } = await sb.auth.signUp({
+      email, password: pass,
+      options: { emailRedirectTo: window.location.origin }
+    });
+    if (error) throw error;
+    if (data.user && data.user.identities && data.user.identities.length === 0) {
+      authMsg('This email is already registered. Use Log in instead.');
+    } else {
+      authMsg(`Verification email sent to ${email}. Open your inbox, click the link, then come back and log in. (Check spam if you don't see it within a minute.)`, 'ok');
+    }
+  } catch (e) {
+    authMsg(e.message || 'Signup failed. Try again.');
+  }
+  btn.disabled = false; btn.textContent = 'Create account';
+}
+
+async function doLogin() {
+  const email = document.getElementById('auth-email').value.trim();
+  const pass = document.getElementById('auth-pass').value;
+  if (!email || !pass) return authMsg('Enter your email and password.');
+  const btn = document.getElementById('login-btn');
+  btn.disabled = true; btn.textContent = 'Logging in…';
+  try {
+    const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+    if (error) {
+      if (/confirm/i.test(error.message)) throw new Error('Email not verified yet — click the link in the verification email first.');
+      throw error;
+    }
+    guestMode = false;
+    show('s-setup');
+    toast('✓ Logged in');
+  } catch (e) {
+    authMsg(e.message || 'Login failed.');
+  }
+  btn.disabled = false; btn.textContent = 'Log in';
+}
+
+async function doSignOut() {
+  await sb.auth.signOut();
+  guestMode = false;
+  show('s-auth');
+  authMsg('Signed out.', 'ok');
+}
+
+function continueGuest() {
+  guestMode = true;
+  show('s-setup');
+  toast('Guest mode — attempts will not be saved');
+}
+
+// ── Refresh warning while progress exists ─────────────
+window.addEventListener('beforeunload', (e) => {
+  const inQuiz = document.getElementById('s-quiz').classList.contains('active');
+  const partialSections = parts.length > 1
+    && Object.keys(partScores).length > 0
+    && Object.keys(partScores).length < parts.length;
+  if (inQuiz || partialSections) {
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});
 
 // ── Utils ─────────────────────────────────────────────
 function show(id) {
@@ -544,6 +787,164 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+// ── Section splitting (full-document coverage) ───────
+// Splits long content at concept boundaries: headings first,
+// then paragraph breaks, then sentence ends. Never mid-sentence.
+let parts = [];
+let activePart = -1;
+let partScores = {};
+const PART_TARGET = 8000; // chars per section — fits Groq free tier
+
+function looksLikeHeading(line) {
+  const t = line.trim();
+  if (!t || t.length > 70) return false;
+  if (/^\d+[\.\)]\s+\S/.test(t)) return true;                 // "1. Topic"
+  if (/[.!?,;]$/.test(t)) return false;                        // sentences end with punctuation
+  const words = t.split(/\s+/);
+  if (words.length <= 8 && /^[A-Z]/.test(t)) return true;      // short title-case line
+  return false;
+}
+
+function splitIntoParts(text) {
+  if (text.length <= PART_TARGET + 1500) {
+    return [{ title: 'Full document', text }];
+  }
+  // 1) Build blocks: a heading plus everything under it
+  const lines = text.split('\n');
+  const blocks = [];
+  let buf = [], title = null;
+  for (const line of lines) {
+    if (looksLikeHeading(line) && buf.join(' ').trim().length > 250) {
+      blocks.push({ title, text: buf.join('\n').trim() });
+      buf = [line]; title = line.trim();
+    } else {
+      if (title === null && line.trim()) title = line.trim().slice(0, 60);
+      buf.push(line);
+    }
+  }
+  if (buf.join(' ').trim()) blocks.push({ title, text: buf.join('\n').trim() });
+
+  // 2) Oversized single blocks: split at paragraph, then sentence ends
+  const units = [];
+  for (const b of blocks) {
+    if (b.text.length <= PART_TARGET) { units.push(b); continue; }
+    const paras = b.text.split(/\n\s*\n/);
+    let chunk = '';
+    const flush = () => { if (chunk.trim()) units.push({ title: b.title, text: chunk.trim() }); chunk = ''; };
+    for (const p of paras) {
+      if (p.length > PART_TARGET) {
+        flush();
+        const sentences = p.match(/[^.!?]+[.!?]+["']?\s*/g) || [p];
+        for (const s of sentences) {
+          if ((chunk + s).length > PART_TARGET) flush();
+          chunk += s;
+        }
+        flush();
+      } else {
+        if ((chunk + '\n\n' + p).length > PART_TARGET) flush();
+        chunk += (chunk ? '\n\n' : '') + p;
+      }
+    }
+    flush();
+  }
+
+  // 3) Greedy-pack whole units into sections ≤ PART_TARGET
+  const GENERIC = /^(why it matters|common mistakes|walkthrough|key takeaways|detailed explanation|mental model|what you'?ll learn.*|next steps|examples?)$/i;
+  const packed = [];
+  let cur = null;
+  for (const u of units) {
+    if (!cur) { cur = { titles: [u.title], text: u.text }; continue; }
+    if ((cur.text.length + u.text.length + 2) <= PART_TARGET) {
+      cur.text += '\n\n' + u.text;
+      cur.titles.push(u.title);
+    } else {
+      packed.push(cur);
+      cur = { titles: [u.title], text: u.text };
+    }
+  }
+  if (cur) packed.push(cur);
+  return packed.map((p, i) => {
+    const good = p.titles.find(t => t && !GENERIC.test(t.trim()));
+    return { title: good || p.titles[0] || `Section ${i+1}`, text: p.text };
+  });
+}
+
+function rebuildParts() {
+  const text = document.getElementById('content').value.trim();
+  parts = text ? splitIntoParts(text) : [];
+  activePart = -1;
+  partScores = {};
+  renderParts();
+}
+
+function renderParts() {
+  const panel = document.getElementById('parts-panel');
+  const grid = document.getElementById('parts-grid');
+  if (parts.length <= 1) {
+    panel.classList.remove('show');
+    grid.innerHTML = '';
+    updateGenBtn();
+    return;
+  }
+  const nextIdx = parts.findIndex((_, i) => !partScores[i]);
+  document.getElementById('parts-sub').textContent =
+    `Your document was split at topic boundaries into ${parts.length} sections so 100% of it gets covered. Attempt them in order — each section sends only its own text to the AI.`;
+  grid.innerHTML = parts.map((p, i) => {
+    const done = !!partScores[i];
+    const words = p.text.split(/\s+/).length;
+    const cls = 'part-card' + (done ? ' done' : '') + (i === nextIdx ? ' next' : '');
+    const scoreHtml = done ? `<span class="part-score">✓ ${partScores[i].pct}%</span>` : '';
+    const btnLabel = done ? 'Retry' : (i === nextIdx ? 'Start →' : 'Attempt');
+    return `<div class="${cls}">
+      <div class="part-num">${done ? '✓' : i+1}</div>
+      <div class="part-info">
+        <div class="part-name">${esc(p.title || 'Section '+(i+1))}</div>
+        <div class="part-meta">${words.toLocaleString()} words</div>
+      </div>
+      ${scoreHtml}
+      <button class="part-btn" onclick="startPart(${i})">${btnLabel}</button>
+    </div>`;
+  }).join('');
+  panel.classList.add('show');
+  updateGenBtn();
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function updateGenBtn() {
+  const btn = document.getElementById('gen-btn');
+  const label = btn.querySelector('span') || btn.lastChild;
+  if (parts.length > 1) {
+    const next = parts.findIndex((_, i) => !partScores[i]);
+    btn.lastChild.textContent = next === -1
+      ? ' All sections done — pick any to retry'
+      : ` Generate — Section ${next+1} of ${parts.length}`;
+  } else {
+    btn.lastChild.textContent = ' Generate exam paper';
+  }
+}
+
+function startPart(i) {
+  activePart = i;
+  currentSectionTitle = parts[i].title || `Section ${i+1}`;
+  viewingHistory = false;
+  startGeneration(parts[i].text);
+}
+
+function generateNext() {
+  viewingHistory = false;
+  if (parts.length > 1) {
+    const next = parts.findIndex((_, i) => !partScores[i]);
+    startPart(next === -1 ? 0 : next);
+  } else {
+    activePart = -1;
+    currentSectionTitle = 'Full document';
+    startGeneration();
+  }
+}
+
 // ── Content validator ─────────────────────────────────
 function validateContent(text) {
   const cleaned = text.trim();
@@ -600,10 +1001,19 @@ async function processFile(file) {
       const buf = await file.arrayBuffer();
       const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
       const pages = [];
-      for (let i = 1; i <= Math.min(pdf.numPages, 30); i++) {
+      for (let i = 1; i <= Math.min(pdf.numPages, 60); i++) {
         const page = await pdf.getPage(i);
         const tc = await page.getTextContent();
-        pages.push(tc.items.map(s => s.str).join(' '));
+        // Rebuild line breaks from Y positions so headings and
+        // paragraphs survive extraction (needed for clean splitting).
+        let out = '', lastY = null;
+        for (const it of tc.items) {
+          const y = it.transform ? it.transform[5] : null;
+          if (lastY !== null && y !== null && Math.abs(y - lastY) > 2) out += '\n';
+          out += it.str + ' ';
+          if (y !== null) lastY = y;
+        }
+        pages.push(out);
       }
       text = pages.join('\n');
     } else if (ext === 'docx' || ext === 'doc') {
@@ -621,9 +1031,13 @@ async function processFile(file) {
       return;
     }
     document.getElementById('content').value = text.trim();
+    rebuildParts();
     const wordCount = text.trim().split(/\s+/).length;
     status.className = 'upload-status ok';
-    status.textContent = `✓ ${file.name} — ${wordCount.toLocaleString()} words extracted. The text below is exactly what the AI will read — review or trim it if needed.`;
+    const n = parts.length;
+    status.textContent = n > 1
+      ? `✓ ${file.name} — ${wordCount.toLocaleString()} words extracted and split into ${n} sections below. Nothing is skipped — attempt them one by one.`
+      : `✓ ${file.name} — ${wordCount.toLocaleString()} words extracted. The text below is exactly what the AI will read.`;
   } catch(e) {
     status.className = 'upload-status err';
     status.textContent = `Could not read file: ${e.message}. Try pasting directly.`;
@@ -631,8 +1045,8 @@ async function processFile(file) {
 }
 
 // ── Generation ────────────────────────────────────────
-async function startGeneration() {
-  const content = document.getElementById('content').value.trim();
+async function startGeneration(overrideText) {
+  const content = (overrideText !== undefined ? overrideText : document.getElementById('content').value).trim();
   const validationError = validateContent(content);
   if (validationError) {
     document.getElementById('setup-err').innerHTML = `<div class="err-box">${validationError}</div>`;
@@ -647,6 +1061,10 @@ async function startGeneration() {
   const types   = [...activeTypes];
 
   show('s-loading');
+  document.getElementById('load-title').textContent =
+    (activePart >= 0 && parts.length > 1)
+      ? `Generating Section ${activePart+1} of ${parts.length}`
+      : 'Generating your exam paper';
 
   const steps = [
     'Reading your content...',
@@ -690,7 +1108,7 @@ async function startGeneration() {
 async function callGroq(content, count, types) {
   // Long documents: sample beginning, middle, and end so questions
   // cover the whole material instead of only the first pages.
-  function sampleContent(text, limit = 15000) {
+  function sampleContent(text, limit = 9000) {
     if (text.length <= limit) return text;
     const part = Math.floor(limit / 3);
     const mid = Math.floor(text.length / 2);
@@ -741,7 +1159,13 @@ ${sampleContent(content)}`;
   const res = await fetch('/api/generate', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({ system: systemPrompt, user: userPrompt })
+    body: JSON.stringify({
+      system: systemPrompt,
+      user: userPrompt,
+      // Groq free tier counts prompt + reserved output against a 12k TPM
+      // limit, so reserve only what this paper size actually needs.
+      max_tokens: Math.min(6000, 600 + count * 220)
+    })
   });
 
   if (!res.ok) {
@@ -923,6 +1347,84 @@ function submitExam() {
   show('s-results');
 }
 
+// ── Attempt history (Supabase) ────────────────────────
+async function saveAttempt(score, maxScore, pct, elapsed) {
+  if (!sb) return;
+  if (!currentUser) {
+    if (!savePromptShown) { toast('Not saved — log in to keep your history'); savePromptShown = true; }
+    return;
+  }
+  try {
+    const { error } = await sb.from('acemock_attempts').insert({
+      user_id: currentUser.id,
+      section_title: currentSectionTitle || 'Full document',
+      score, max_score: maxScore, pct,
+      time_taken: elapsed,
+      paper: { questions, answers }
+    });
+    if (error) throw error;
+    toast('✓ Attempt saved to history');
+  } catch (e) {
+    toast('Could not save attempt: ' + (e.message || 'Supabase error'));
+  }
+}
+
+async function openHistory() {
+  if (!sb) { toast('History is off — add Supabase keys in index.html'); return; }
+  if (!currentUser) { show('s-auth'); authMsg('Log in to see your saved attempts.', 'ok'); return; }
+  show('s-history');
+  const list = document.getElementById('hist-list');
+  list.innerHTML = '<div class="hist-empty">Loading…</div>';
+  try {
+    const { data, error } = await sb.from('acemock_attempts')
+      .select('id, created_at, section_title, score, max_score, pct, time_taken')
+      .order('created_at', { ascending: false })
+      .limit(100);
+    if (error) throw error;
+    if (!data || !data.length) {
+      list.innerHTML = '<div class="hist-empty">No attempts yet. Finish a paper and it will appear here automatically.</div>';
+      return;
+    }
+    list.innerHTML = data.map(r => {
+      const d = new Date(r.created_at);
+      const when = d.toLocaleDateString('en-IN', {day:'numeric', month:'short'}) + ', ' +
+                   d.toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit'});
+      const mins = Math.floor((r.time_taken||0)/60), secs = (r.time_taken||0)%60;
+      const cls = r.pct >= 85 ? 'hp-good' : r.pct >= 60 ? 'hp-mid' : 'hp-low';
+      return `<div class="hist-card">
+        <div class="hist-pct ${cls}">${r.pct}%<span>${r.score}/${r.max_score}</span></div>
+        <div class="hist-info">
+          <div class="hist-name">${esc(r.section_title || 'Untitled')}</div>
+          <div class="hist-meta">${when} · ${mins}m ${secs}s</div>
+        </div>
+        <div class="hist-actions">
+          <button class="part-btn" onclick="reviewAttempt('${r.id}')">Revise</button>
+        </div>
+      </div>`;
+    }).join('');
+  } catch (e) {
+    list.innerHTML = `<div class="hist-empty">Could not load history: ${esc(e.message || 'Supabase error')}.<br>Check the table exists and the keys in index.html are correct.</div>`;
+  }
+}
+
+async function reviewAttempt(id) {
+  try {
+    const { data, error } = await sb.from('acemock_attempts')
+      .select('*').eq('id', id).single();
+    if (error) throw error;
+    clearInterval(timerInt);
+    questions = data.paper.questions || [];
+    answers   = data.paper.answers || {};
+    activePart = -1;
+    currentSectionTitle = data.section_title || 'Past attempt';
+    viewingHistory = true;
+    buildResults(data.time_taken || 0);
+    show('s-results');
+  } catch (e) {
+    toast('Could not open attempt: ' + (e.message || 'error'));
+  }
+}
+
 // ── PDF download (preserves colours) ─────────────────
 async function downloadPDF() {
   const btn = document.getElementById('dl-btn');
@@ -932,9 +1434,10 @@ async function downloadPDF() {
   try {
     const src = document.querySelector('.results-scroll');
     const stamp = new Date().toISOString().slice(0,16).replace('T','_').replace(':','-');
+    const slug = (currentSectionTitle || 'Paper').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40) || 'Paper';
     await html2pdf().set({
       margin: [8, 8, 10, 8],
-      filename: `AceMock_Result_${stamp}.pdf`,
+      filename: `AceMock_${slug}_${stamp}.pdf`,
       image: { type: 'jpeg', quality: 0.95 },
       html2canvas: { scale: 2, useCORS: true, backgroundColor: '#f8fafc',
         onclone: (doc) => {
@@ -1007,6 +1510,36 @@ function buildResults(elapsed) {
 
   document.getElementById('r-review-count').textContent = `— ${questions.length} questions`;
 
+  // Section flow: record this section's score and offer the next one
+  const oldNext = document.getElementById('next-part-btn');
+  if (oldNext) oldNext.remove();
+  const oldBack = document.getElementById('hist-back-btn');
+  if (oldBack) oldBack.remove();
+
+  if (viewingHistory) {
+    const b = document.createElement('button');
+    b.id = 'hist-back-btn';
+    b.className = 'btn-new';
+    b.textContent = '← Back to history';
+    b.onclick = () => { viewingHistory = false; openHistory(); };
+    document.getElementById('results-actions').prepend(b);
+  } else {
+    if (activePart >= 0 && parts.length > 1) {
+      partScores[activePart] = { score, pct };
+      renderParts();
+      const nextIdx = parts.findIndex((_, i) => !partScores[i]);
+      if (nextIdx !== -1) {
+        const b = document.createElement('button');
+        b.id = 'next-part-btn';
+        b.className = 'btn-restart';
+        b.textContent = `Next section (${nextIdx+1} of ${parts.length}) →`;
+        b.onclick = () => startPart(nextIdx);
+        document.getElementById('results-actions').prepend(b);
+      }
+    }
+    saveAttempt(score, maxScore, pct, elapsed);
+  }
+
   document.getElementById('review-list').innerHTML = questions.map((q, idx) => {
     const a = answers[q.id];
     const empty = a === undefined || a === null || a === '' || (Array.isArray(a) && !a.length);
@@ -1077,8 +1610,19 @@ function retry() {
 function newExam() {
   clearInterval(timerInt);
   document.getElementById('gen-btn').disabled = false;
+  renderParts();
   show('s-setup');
 }
+
+// Re-split whenever pasted text changes (debounced)
+let rebuildT = null;
+document.getElementById('content').addEventListener('input', () => {
+  clearTimeout(rebuildT);
+  rebuildT = setTimeout(rebuildParts, 600);
+});
+
+// Boot: decide between login screen and the app
+initAuth();
 </script>
 </body>
 </html>
