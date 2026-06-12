@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AceMock — AI Exam Prep</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#ffffff;
+  --bg2:#f8fafc;
+  --bg3:#f1f5f9;
+  --border:#e2e8f0;
+  --border2:#cbd5e1;
+  --text:#0f172a;
+  --text2:#475569;
+  --text3:#94a3b8;
+  --indigo:#4f46e5;
+  --indigo-l:#eef2ff;
+  --indigo-b:#c7d2fe;
+  --cyan:#0891b2;
+  --cyan-l:#ecfeff;
+  --cyan-b:#a5f3fc;
+  --violet:#7c3aed;
+  --violet-l:#f5f3ff;
+  --violet-b:#ddd6fe;
+  --green:#10b981;
+  --green-l:#ecfdf5;
+  --green-b:#a7f3d0;
+  --red:#ef4444;
+  --red-l:#fef2f2;
+  --red-b:#fecaca;
+  --amber:#f59e0b;
+  --amber-l:#fffbeb;
+  --amber-b:#fde68a;
+}
+html{font-family:'Inter',system-ui,sans-serif;color:var(--text);background:var(--bg);font-size:16px;line-height:1.5}
+button{cursor:pointer;font-family:inherit;transition:all .15s}
+textarea,input,select{font-family:inherit}
+a{color:var(--indigo);text-decoration:none}
+
+/* Layout */
+.shell{min-height:100vh;display:flex;flex-direction:column}
+.screen{display:none;flex:1}
+.screen.active{display:flex;flex-direction:column}
+
+/* ── SCREEN 1: SETUP ── */
+#s-setup{background:var(--bg);align-items:center;justify-content:center;padding:32px 20px}
+.setup-inner{width:100%;max-width:680px}
+.setup-logo{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.logo-mark{width:36px;height:36px;background:var(--indigo);border-radius:9px;display:flex;align-items:center;justify-content:center}
+.logo-mark svg{color:#fff}
+.logo-name{font-size:22px;font-weight:700;color:var(--text);letter-spacing:-.5px}
+.logo-badge{font-size:10px;font-weight:600;padding:2px 7px;background:var(--indigo-l);color:var(--indigo);border-radius:10px;letter-spacing:.5px}
+.setup-tagline{font-size:14px;color:var(--text2);margin-bottom:28px}
+
+.paste-label{font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px;display:block;letter-spacing:.3px;text-transform:uppercase}
+.paste-area{width:100%;min-height:140px;padding:14px 16px;border:1.5px solid var(--border);border-radius:12px;font-size:13.5px;color:var(--text);background:var(--bg2);resize:vertical;outline:none;line-height:1.6;transition:border .15s}
+.paste-area:focus{border-color:var(--indigo)}
+.paste-area::placeholder{color:var(--text3)}
+
+.config-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
+.cfg-block{display:flex;flex-direction:column;gap:5px}
+.cfg-label{font-size:11.5px;font-weight:600;color:var(--text2);letter-spacing:.3px;text-transform:uppercase}
+.cfg-select{padding:9px 12px;border:1.5px solid var(--border);border-radius:9px;font-size:13.5px;color:var(--text);background:var(--bg);outline:none;cursor:pointer;transition:border .15s;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
+.cfg-select:focus{border-color:var(--indigo)}
+
+.type-row{display:flex;gap:8px;margin-top:16px}
+.type-toggle{flex:1;padding:9px 8px;border:1.5px solid var(--border);border-radius:9px;font-size:12.5px;font-weight:600;color:var(--text2);background:var(--bg);text-align:center;user-select:none;transition:all .15s}
+.type-toggle:hover{border-color:var(--border2)}
+.type-toggle.on.mcq{border-color:var(--indigo);background:var(--indigo-l);color:var(--indigo)}
+.type-toggle.on.msq{border-color:var(--cyan);background:var(--cyan-l);color:var(--cyan)}
+.type-toggle.on.nat{border-color:var(--violet);background:var(--violet-l);color:var(--violet)}
+.type-sub{font-size:10px;font-weight:400;display:block;margin-top:1px;opacity:.7}
+
+.gen-btn{width:100%;margin-top:20px;padding:14px;background:var(--indigo);color:#fff;border:none;border-radius:11px;font-size:15px;font-weight:600;letter-spacing:-.2px;display:flex;align-items:center;justify-content:center;gap:8px}
+.gen-btn:hover{background:#4338ca}
+.gen-btn:disabled{opacity:.5;cursor:not-allowed}
+
+.marking-info{margin-top:14px;padding:11px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:9px;font-size:11.5px;color:var(--text2);line-height:1.7}
+.marking-info strong{color:var(--text)}
+.err-box{margin-top:10px;padding:10px 14px;background:var(--red-l);border:1px solid var(--red-b);border-radius:9px;font-size:12.5px;color:var(--red)}
+
+/* ── SCREEN 2: GENERATING ── */
+#s-loading{align-items:center;justify-content:center;background:var(--bg)}
+.loading-inner{text-align:center;padding:40px 20px}
+.spin-ring{width:52px;height:52px;border:3.5px solid var(--border);border-top-color:var(--indigo);border-radius:50%;animation:spin .75s linear infinite;margin:0 auto 20px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.load-title{font-size:18px;font-weight:600;color:var(--text);margin-bottom:6px}
+.load-msg{font-size:13.5px;color:var(--text2)}
+.load-steps{display:flex;gap:6px;margin-top:20px;justify-content:center}
+.load-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:background .3s}
+.load-dot.done{background:var(--indigo)}
+.load-dot.active{background:var(--amber);animation:pulse .6s ease-in-out infinite alternate}
+@keyframes pulse{to{transform:scale(1.4)}}
+
+/* ── SCREEN 3: QUIZ ── */
+#s-quiz{background:var(--bg2);flex-direction:row}
+.quiz-sidebar{width:220px;min-width:220px;background:var(--bg);border-right:1px solid var(--border);padding:20px;display:flex;flex-direction:column;gap:16px}
+.quiz-main{flex:1;overflow-y:auto;padding:24px 28px;max-width:820px}
+
+/* Sidebar */
+.q-prog-label{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.4px}
+.q-prog-bar{height:4px;background:var(--bg3);border-radius:2px;margin-top:6px;overflow:hidden}
+.q-prog-fill{height:100%;background:var(--indigo);border-radius:2px;transition:width .4s ease}
+.q-prog-count{font-size:12px;color:var(--text2);margin-top:4px}
+
+.timer-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center}
+.timer-label{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.timer-val{font-size:26px;font-weight:700;color:var(--text);font-family:'JetBrains Mono',monospace;letter-spacing:-1px}
+.timer-val.warn{color:var(--amber);animation:timerflash .5s ease-in-out infinite alternate}
+.timer-val.danger{color:var(--red);animation:timerflash .3s ease-in-out infinite alternate}
+@keyframes timerflash{to{opacity:.6}}
+
+.q-map-label{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px}
+.q-map-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:5px}
+.q-dot{width:100%;aspect-ratio:1;border:1.5px solid var(--border);border-radius:6px;font-size:10.5px;font-weight:600;color:var(--text3);background:var(--bg);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .12s}
+.q-dot:hover{border-color:var(--border2);background:var(--bg3)}
+.q-dot.answered{background:var(--indigo);border-color:var(--indigo);color:#fff}
+.q-dot.current{border-color:var(--indigo);color:var(--indigo);background:var(--indigo-l)}
+.q-dot.answered.current{background:var(--indigo);color:#fff;box-shadow:0 0 0 2px var(--indigo-b)}
+
+.submit-btn{width:100%;padding:10px;background:var(--indigo);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:600;margin-top:auto}
+.submit-btn:hover{background:#4338ca}
+
+/* Quiz main */
+.type-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-bottom:14px}
+.type-badge.MCQ{background:var(--indigo-l);color:var(--indigo)}
+.type-badge.MSQ{background:var(--cyan-l);color:var(--cyan)}
+.type-badge.NAT{background:var(--violet-l);color:var(--violet)}
+.type-badge svg{width:11px;height:11px}
+
+.q-text{font-size:17px;font-weight:500;color:var(--text);line-height:1.6;margin-bottom:8px}
+.q-hint{font-size:12px;color:var(--text3);margin-bottom:18px;font-style:italic}
+
+.options-list{display:flex;flex-direction:column;gap:9px}
+.opt-card{display:flex;align-items:flex-start;gap:13px;padding:13px 16px;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;transition:all .15s;background:var(--bg);user-select:none}
+.opt-card:hover{border-color:var(--border2);background:var(--bg3)}
+.opt-card.sel-mcq{border-color:var(--indigo);background:var(--indigo-l)}
+.opt-card.sel-msq{border-color:var(--cyan);background:var(--cyan-l)}
+.opt-key{width:26px;height:26px;min-width:26px;border-radius:7px;border:1.5px solid var(--border2);font-size:12px;font-weight:600;color:var(--text2);display:flex;align-items:center;justify-content:center;transition:all .15s;background:var(--bg2)}
+.sel-mcq .opt-key{background:var(--indigo);border-color:var(--indigo);color:#fff}
+.sel-msq .opt-key{background:var(--cyan);border-color:var(--cyan);color:#fff}
+.opt-text{font-size:14px;color:var(--text);line-height:1.45;padding-top:3px}
+
+.nat-wrap{margin-top:4px}
+.nat-input{width:100%;max-width:320px;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:15px;font-family:'JetBrains Mono',monospace;color:var(--text);background:var(--bg);outline:none;transition:border .15s}
+.nat-input:focus{border-color:var(--violet)}
+.nat-hint{font-size:11.5px;color:var(--text3);margin-top:6px}
+
+.q-nav{display:flex;gap:10px;margin-top:28px;padding-top:20px;border-top:1px solid var(--border)}
+.nav-btn{padding:9px 20px;border-radius:9px;font-size:13.5px;font-weight:600;border:1.5px solid var(--border);color:var(--text);background:var(--bg)}
+.nav-btn:hover{background:var(--bg3)}
+.nav-btn.primary{background:var(--indigo);color:#fff;border-color:var(--indigo);margin-left:auto}
+.nav-btn.primary:hover{background:#4338ca;border-color:#4338ca}
+
+/* Mobile quiz */
+@media(max-width:700px){
+  #s-quiz{flex-direction:column}
+  .quiz-sidebar{width:100%;min-width:unset;border-right:none;border-bottom:1px solid var(--border);padding:14px 16px;flex-direction:row;flex-wrap:wrap;gap:10px}
+  .timer-wrap{flex:0 0 auto}
+  .q-map-grid{grid-template-columns:repeat(8,1fr)}
+  .submit-btn{width:auto;padding:9px 18px;margin-top:0}
+  .quiz-main{padding:16px}
+  .q-prog-label,.q-map-label,.q-prog-count{display:none}
+  .q-prog-bar{display:none}
+}
+
+/* ── SCREEN 4: RESULTS ── */
+#s-results{background:var(--bg2);padding:0}
+.results-scroll{flex:1;overflow-y:auto;padding:28px 20px;max-width:820px;margin:0 auto;width:100%}
+
+.score-hero{background:var(--bg);border:1px solid var(--border);border-radius:16px;padding:28px;text-align:center;margin-bottom:20px;position:relative;overflow:hidden}
+.score-hero::before{content:'';position:absolute;top:-40px;right:-40px;width:180px;height:180px;background:var(--indigo-l);border-radius:50%}
+.score-num{font-size:56px;font-weight:700;color:var(--text);letter-spacing:-2px;position:relative;line-height:1}
+.score-denom{font-size:18px;color:var(--text2);font-weight:400}
+.score-pct{font-size:15px;color:var(--text2);margin-top:6px;position:relative}
+.score-grade{display:inline-block;margin-top:10px;padding:4px 14px;border-radius:20px;font-size:13px;font-weight:600}
+.grade-pass{background:var(--green-l);color:var(--green)}
+.grade-near{background:var(--amber-l);color:var(--amber)}
+.grade-fail{background:var(--red-l);color:var(--red)}
+
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+.stat-card{background:var(--bg);border:1px solid var(--border);border-radius:11px;padding:14px;text-align:center}
+.stat-v{font-size:22px;font-weight:700;line-height:1;margin-bottom:3px}
+.stat-k{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px}
+.sv-correct{color:var(--green)}
+.sv-wrong{color:var(--red)}
+.sv-skip{color:var(--amber)}
+
+.results-actions{display:flex;gap:10px;margin-bottom:24px;flex-wrap:wrap}
+.results-actions button{padding:10px 20px;border-radius:9px;font-size:13.5px;font-weight:600}
+.btn-restart{background:var(--indigo);color:#fff;border:none}
+.btn-restart:hover{background:#4338ca}
+.btn-new{background:var(--bg);color:var(--text);border:1.5px solid var(--border)}
+.btn-new:hover{background:var(--bg3)}
+
+.review-header{font-size:14px;font-weight:600;color:var(--text);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.review-count{font-size:12px;color:var(--text3);font-weight:400}
+
+.review-card{background:var(--bg);border:1.5px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px;transition:border .2s}
+.review-card.rc-correct{border-color:var(--green-b)}
+.review-card.rc-wrong{border-color:var(--red-b)}
+.review-card.rc-skip{opacity:.75}
+
+.rc-top{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.rc-num{font-size:11px;color:var(--text3);font-weight:600}
+.rc-status{font-size:10.5px;font-weight:700;padding:2px 9px;border-radius:10px;letter-spacing:.3px}
+.rcs-correct{background:var(--green-l);color:var(--green)}
+.rcs-wrong{background:var(--red-l);color:var(--red)}
+.rcs-skip{background:var(--bg3);color:var(--text3)}
+.rc-pts{font-size:11px;color:var(--text3);margin-left:auto;font-family:'JetBrains Mono',monospace}
+
+.rc-question{font-size:14px;font-weight:500;color:var(--text);line-height:1.55;margin-bottom:12px}
+
+.rc-answers{display:flex;flex-direction:column;gap:6px;font-size:12.5px}
+.rc-answer-row{display:flex;align-items:flex-start;gap:8px;padding:7px 10px;border-radius:7px;line-height:1.4}
+.rc-answer-row.correct-ans{background:var(--green-l);border:1px solid var(--green-b)}
+.rc-answer-row.wrong-ans{background:var(--red-l);border:1px solid var(--red-b)}
+.rc-answer-row.your-ans{background:var(--bg2);border:1px solid var(--border)}
+.ans-label{font-size:10.5px;font-weight:700;min-width:80px;color:var(--text2);text-transform:uppercase;letter-spacing:.3px;padding-top:1px}
+.ans-text{color:var(--text)}
+.ans-icon{font-size:13px;min-width:16px}
+
+.rc-explanation{margin-top:12px;padding:10px 12px;background:var(--bg2);border-radius:8px;border-left:3px solid var(--indigo)}
+.exp-label{font-size:10px;font-weight:700;color:var(--indigo);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+.exp-text{font-size:12.5px;color:var(--text2);line-height:1.6}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- ═══ SCREEN 1: SETUP ═══ -->
+<div class="screen active" id="s-setup">
+  <div class="setup-inner">
+    <div class="setup-logo">
+      <div class="logo-mark">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      </div>
+      <span class="logo-name">AceMock</span>
+      <span class="logo-badge">AI EXAM PREP</span>
+    </div>
+    <p class="setup-tagline">Paste any lecture transcript or notes — get a timed MCQ/MSQ/NAT mock paper with detailed review.</p>
+
+    <label class="paste-label">Your content</label>
+    <textarea class="paste-area" id="content" rows="7" placeholder="Paste your lecture transcript, notes, module summary, or any study material here...
+
+The AI will read the content, identify key concepts, and build exam-style questions from it. Works best with 200+ words."></textarea>
+
+    <div class="config-grid">
+      <div class="cfg-block">
+        <span class="cfg-label">Questions</span>
+        <select class="cfg-select" id="cfg-count">
+          <option value="10">10 questions</option>
+          <option value="15" selected>15 questions</option>
+          <option value="20">20 questions</option>
+          <option value="25">25 questions</option>
+          <option value="30">30 questions</option>
+        </select>
+      </div>
+      <div class="cfg-block">
+        <span class="cfg-label">Time limit</span>
+        <select class="cfg-select" id="cfg-time">
+          <option value="20">20 minutes</option>
+          <option value="30" selected>30 minutes</option>
+          <option value="45">45 minutes</option>
+          <option value="60">60 minutes</option>
+          <option value="90">90 minutes</option>
+          <option value="180">180 min (full exam)</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="margin-top:14px">
+      <span class="cfg-label">Question types</span>
+      <div class="type-row">
+        <div class="type-toggle on mcq" data-type="MCQ" onclick="toggleType(this)">
+          MCQ<span class="type-sub">Single answer</span>
+        </div>
+        <div class="type-toggle on msq" data-type="MSQ" onclick="toggleType(this)">
+          MSQ<span class="type-sub">Multi select</span>
+        </div>
+        <div class="type-toggle on nat" data-type="NAT" onclick="toggleType(this)">
+          NAT<span class="type-sub">Exact answer</span>
+        </div>
+      </div>
+    </div>
+
+    <button class="gen-btn" id="gen-btn" onclick="startGeneration()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+      Generate exam paper
+    </button>
+
+    <div class="marking-info">
+      <strong>BITSoM marking scheme:</strong> MCQ +4 correct / −1 wrong / 0 skipped · MSQ +4 if all correct selected / 0 otherwise (no partial marking) · NAT +4 correct / 0 wrong (no negative marking)
+    </div>
+    <div id="setup-err"></div>
+  </div>
+</div>
+
+<!-- ═══ SCREEN 2: GENERATING ═══ -->
+<div class="screen" id="s-loading">
+  <div class="loading-inner">
+    <div class="spin-ring"></div>
+    <div class="load-title">Generating your exam paper</div>
+    <div class="load-msg" id="load-msg">Reading your content...</div>
+    <div class="load-steps">
+      <div class="load-dot active" id="dot0"></div>
+      <div class="load-dot" id="dot1"></div>
+      <div class="load-dot" id="dot2"></div>
+      <div class="load-dot" id="dot3"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SCREEN 3: QUIZ ═══ -->
+<div class="screen" id="s-quiz">
+  <!-- Sidebar -->
+  <div class="quiz-sidebar">
+    <div>
+      <div class="q-prog-label">Progress</div>
+      <div class="q-prog-bar"><div class="q-prog-fill" id="prog-fill" style="width:0%"></div></div>
+      <div class="q-prog-count" id="prog-count">0 of 0 answered</div>
+    </div>
+    <div class="timer-wrap">
+      <div class="timer-label">Time left</div>
+      <div class="timer-val" id="timer-val">--:--</div>
+    </div>
+    <div>
+      <div class="q-map-label">Questions</div>
+      <div class="q-map-grid" id="q-map"></div>
+    </div>
+    <button class="submit-btn" onclick="confirmSubmit()">Submit exam</button>
+  </div>
+
+  <!-- Main quiz area -->
+  <div class="quiz-main">
+    <div id="quiz-content"></div>
+    <div class="q-nav" id="q-nav">
+      <button class="nav-btn" id="prev-btn" onclick="goTo(cur-1)">← Previous</button>
+      <button class="nav-btn primary" id="next-btn" onclick="goTo(cur+1)">Next →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SCREEN 4: RESULTS ═══ -->
+<div class="screen" id="s-results">
+  <div class="results-scroll">
+    <div class="score-hero">
+      <div style="position:relative">
+        <div class="score-num" id="r-score">0 <span class="score-denom" id="r-denom">/ 0</span></div>
+        <div class="score-pct" id="r-pct">0%</div>
+        <div class="score-grade" id="r-grade"></div>
+      </div>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-v sv-correct" id="r-correct">0</div><div class="stat-k">Correct (+4)</div></div>
+      <div class="stat-card"><div class="stat-v sv-wrong" id="r-wrong">0</div><div class="stat-k">Wrong MCQ (−1)</div></div>
+      <div class="stat-card"><div class="stat-v sv-skip" id="r-skip">0</div><div class="stat-k">Skipped (0)</div></div>
+      <div class="stat-card"><div class="stat-v" id="r-time">—</div><div class="stat-k">Time taken</div></div>
+    </div>
+
+    <div class="results-actions">
+      <button class="btn-restart" onclick="retry()">Retry same paper</button>
+      <button class="btn-new" onclick="newExam()">New transcript</button>
+    </div>
+
+    <div class="review-header">
+      Question review
+      <span class="review-count" id="r-review-count"></span>
+    </div>
+    <div id="review-list"></div>
+  </div>
+</div>
+
+</div><!-- .shell -->
+
+<script>
+// ── State ─────────────────────────────────────────────
+let questions = [];
+let answers   = {};
+let cur       = 0;
+let timerSec  = 0;
+let timerInt  = null;
+let startMs   = 0;
+let activeTypes = new Set(['MCQ','MSQ','NAT']);
+
+// ── Utils ─────────────────────────────────────────────
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ── Type toggles ──────────────────────────────────────
+function toggleType(el) {
+  const t = el.dataset.type;
+  if (activeTypes.has(t)) {
+    if (activeTypes.size === 1) return;
+    activeTypes.delete(t);
+    el.classList.remove('on');
+  } else {
+    activeTypes.add(t);
+    el.classList.add('on');
+  }
+}
+
+// ── Generation ────────────────────────────────────────
+async function startGeneration() {
+  const content = document.getElementById('content').value.trim();
+  if (!content || content.length < 80) {
+    document.getElementById('setup-err').innerHTML = '<div class="err-box">Please paste at least a paragraph of content before generating.</div>';
+    return;
+  }
+  document.getElementById('setup-err').innerHTML = '';
+  document.getElementById('gen-btn').disabled = true;
+
+  const count   = parseInt(document.getElementById('cfg-count').value);
+  const timeMins= parseInt(document.getElementById('cfg-time').value);
+  const types   = [...activeTypes];
+
+  show('s-loading');
+
+  const steps = [
+    'Reading your content...',
+    'Identifying key concepts...',
+    'Writing exam questions...',
+    'Validating answers...'
+  ];
+  let si = 0;
+  const stepInt = setInterval(() => {
+    if (si > 0) { document.getElementById(`dot${si-1}`).className = 'load-dot done'; }
+    if (si < steps.length) {
+      document.getElementById(`dot${si}`).className = 'load-dot active';
+      document.getElementById('load-msg').textContent = steps[si];
+      si++;
+    }
+  }, 2200);
+
+  try {
+    const qs = await callGroq(content, count, types);
+    clearInterval(stepInt);
+    if (!qs || !qs.length) throw new Error('No questions returned');
+
+    questions  = qs;
+    answers    = {};
+    cur        = 0;
+    timerSec   = timeMins * 60;
+    startMs    = Date.now();
+
+    renderQuizMap();
+    renderQuestion();
+    startTimer();
+    show('s-quiz');
+  } catch(e) {
+    clearInterval(stepInt);
+    document.getElementById('gen-btn').disabled = false;
+    show('s-setup');
+    document.getElementById('setup-err').innerHTML = `<div class="err-box">Generation failed: ${e.message || 'Unknown error'}. Please try again.</div>`;
+  }
+}
+
+async function callGroq(content, count, types) {
+  const typeMap = (n, types, count) => {
+    const per = Math.floor(count / types.length);
+    const rem = count % types.length;
+    const out = {};
+    types.forEach((t, i) => out[t] = per + (i < rem ? 1 : 0));
+    return out;
+  };
+  const dist = typeMap(count, types, count);
+  const breakdown = types.map(t => `${dist[t]} ${t}`).join(', ');
+
+  const systemPrompt = `You are an expert exam question writer for a Product Management with Generative & Agentic AI certification program. Generate exam questions from content.
+
+Return ONLY a JSON array. No markdown, no preamble, no explanation. Just the raw JSON array.
+
+JSON format:
+[
+  {"id":1,"type":"MCQ","question":"...","options":["A","B","C","D"],"correct":2,"explanation":"Why this answer is correct and why others are wrong."},
+  {"id":2,"type":"MSQ","question":"...","options":["A","B","C","D"],"correct":[0,2],"explanation":"Why both A and C are correct and why B and D are not."},
+  {"id":3,"type":"NAT","question":"...","correct":"exact_answer","explanation":"How to arrive at this answer."}
+]
+
+Rules:
+- MCQ: exactly 4 options, "correct" is a single integer index (0-3)
+- MSQ: exactly 4 options, "correct" is an array of 2-3 integer indices
+- NAT: no options field, "correct" is a string (number or short exact term)
+- Make distractors plausible, not obviously wrong
+- Explanations must explain WHY the answer is correct AND briefly why wrong options are wrong
+- Base all questions directly on the provided content
+- Mix easy, medium, and hard difficulty`;
+
+  const userPrompt = `Generate exactly ${count} questions. Breakdown: ${breakdown}.
+
+CONTENT:
+${content.substring(0, 7000)}`;
+
+  const res = await fetch('/api/generate', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ system: systemPrompt, user: userPrompt })
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `API error ${res.status}`);
+  }
+
+  const data = await res.json();
+  let raw = (data.text || '').replace(/```json|```/g, '').trim();
+  // Find JSON array
+  const start = raw.indexOf('[');
+  const end   = raw.lastIndexOf(']') + 1;
+  if (start === -1 || end === 0) throw new Error('Invalid response format');
+  return JSON.parse(raw.substring(start, end));
+}
+
+// ── Timer ─────────────────────────────────────────────
+function startTimer() {
+  clearInterval(timerInt);
+  renderTimer();
+  timerInt = setInterval(() => {
+    timerSec--;
+    renderTimer();
+    if (timerSec <= 0) { clearInterval(timerInt); submitExam(); }
+  }, 1000);
+}
+
+function renderTimer() {
+  const m = Math.floor(timerSec / 60);
+  const s = timerSec % 60;
+  const el = document.getElementById('timer-val');
+  el.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  el.className = 'timer-val' + (timerSec <= 60 ? ' danger' : timerSec <= 300 ? ' warn' : '');
+}
+
+// ── Quiz rendering ────────────────────────────────────
+function renderQuizMap() {
+  const map = document.getElementById('q-map');
+  map.innerHTML = questions.map((q, i) => {
+    const answered = isAnswered(q);
+    let cls = 'q-dot';
+    if (i === cur) cls += ' current';
+    if (answered) cls += ' answered';
+    return `<div class="${cls}" onclick="goTo(${i})">${i+1}</div>`;
+  }).join('');
+
+  const answered = questions.filter(q => isAnswered(q)).length;
+  document.getElementById('prog-fill').style.width = `${(answered/questions.length)*100}%`;
+  document.getElementById('prog-count').textContent = `${answered} of ${questions.length} answered`;
+}
+
+function isAnswered(q) {
+  const a = answers[q.id];
+  if (a === undefined || a === null || a === '') return false;
+  if (Array.isArray(a)) return a.length > 0;
+  return true;
+}
+
+function renderQuestion() {
+  const q = questions[cur];
+  if (!q) return;
+  renderQuizMap();
+
+  const KEYS = ['A','B','C','D'];
+  const typeIcons = {
+    MCQ: `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4" fill="currentColor" stroke="none"/></svg>`,
+    MSQ: `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>`,
+    NAT: `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`
+  };
+  const typeHints = {
+    MCQ: 'Select one answer',
+    MSQ: 'Select all correct answers — must get all right for marks',
+    NAT: 'Type your exact answer below'
+  };
+
+  let optHtml = '';
+  if (q.type === 'NAT') {
+    const val = answers[q.id] || '';
+    optHtml = `<div class="nat-wrap">
+      <input class="nat-input" id="nat-in" type="text" placeholder="Type answer here..." value="${val}" oninput="setNat(${q.id}, this.value)">
+      <div class="nat-hint">Enter the exact term, number, or value.</div>
+    </div>`;
+  } else {
+    const typeClass = q.type === 'MCQ' ? 'sel-mcq' : 'sel-msq';
+    optHtml = `<div class="options-list">` + (q.options||[]).map((opt, i) => {
+      const sel = isOptSelected(q, i);
+      return `<div class="opt-card${sel?' '+typeClass:''}" onclick="pick(${q.id},${i},'${q.type}')">
+        <div class="opt-key">${KEYS[i]}</div>
+        <div class="opt-text">${opt}</div>
+      </div>`;
+    }).join('') + `</div>`;
+  }
+
+  document.getElementById('quiz-content').innerHTML = `
+    <span class="type-badge ${q.type}">${typeIcons[q.type]} ${q.type}</span>
+    <div class="q-text">Q${cur+1}. ${q.question}</div>
+    <div class="q-hint">${typeHints[q.type]}</div>
+    ${optHtml}`;
+
+  // Nav buttons
+  document.getElementById('prev-btn').style.display = cur === 0 ? 'none' : '';
+  const isLast = cur === questions.length - 1;
+  document.getElementById('next-btn').textContent = isLast ? 'Review →' : 'Next →';
+}
+
+function goTo(idx) {
+  if (idx < 0 || idx >= questions.length) return;
+  cur = idx;
+  renderQuestion();
+  const main = document.querySelector('.quiz-main');
+  if (main) main.scrollTop = 0;
+}
+
+function pick(qId, idx, type) {
+  if (type === 'MCQ') {
+    answers[qId] = idx;
+  } else {
+    const cur2 = answers[qId] || [];
+    answers[qId] = cur2.includes(idx) ? cur2.filter(x => x !== idx) : [...cur2, idx];
+  }
+  const q = questions.find(x => x.id === qId);
+  if (q) renderQuestion();
+  renderQuizMap();
+}
+
+function setNat(qId, val) {
+  answers[qId] = val.trim();
+  renderQuizMap();
+}
+
+function isOptSelected(q, i) {
+  const a = answers[q.id];
+  if (a === undefined || a === null) return false;
+  if (q.type === 'MSQ') return Array.isArray(a) && a.includes(i);
+  return a === i;
+}
+
+// ── Submit ────────────────────────────────────────────
+function confirmSubmit() {
+  const unanswered = questions.filter(q => !isAnswered(q)).length;
+  if (unanswered > 0) {
+    if (!confirm(`You have ${unanswered} unanswered question${unanswered>1?'s':''}. Submit anyway?`)) return;
+  }
+  submitExam();
+}
+
+function submitExam() {
+  clearInterval(timerInt);
+  const elapsed = Math.floor((Date.now() - startMs) / 1000);
+  buildResults(elapsed);
+  show('s-results');
+}
+
+// ── Results ───────────────────────────────────────────
+function buildResults(elapsed) {
+  const KEYS = ['A','B','C','D'];
+  let score = 0, correct = 0, wrong = 0, skip = 0;
+
+  questions.forEach(q => {
+    const a = answers[q.id];
+    const empty = a === undefined || a === null || a === '' || (Array.isArray(a) && !a.length);
+    if (empty) { skip++; return; }
+
+    if (q.type === 'MCQ') {
+      if (a === q.correct) { score += 4; correct++; }
+      else { score -= 1; wrong++; }
+    } else if (q.type === 'MSQ') {
+      const exp = [...(Array.isArray(q.correct)?q.correct:[q.correct])].sort().join();
+      const got = [...(Array.isArray(a)?a:[a])].sort().join();
+      if (exp === got) { score += 4; correct++; }
+      else wrong++;
+    } else {
+      if (String(a).trim().toLowerCase() === String(q.correct).trim().toLowerCase()) { score += 4; correct++; }
+      else wrong++;
+    }
+  });
+
+  const maxScore = questions.length * 4;
+  const pct = Math.round((score / maxScore) * 100);
+  const mins = Math.floor(elapsed / 60);
+  const secs = elapsed % 60;
+
+  document.getElementById('r-score').innerHTML = `${score} <span class="score-denom">/ ${maxScore}</span>`;
+  document.getElementById('r-pct').textContent = `${pct}%`;
+  document.getElementById('r-correct').textContent = correct;
+  document.getElementById('r-wrong').textContent = wrong;
+  document.getElementById('r-skip').textContent = skip;
+  document.getElementById('r-time').textContent = `${mins}m ${secs}s`;
+
+  const gradeEl = document.getElementById('r-grade');
+  if (pct >= 85) { gradeEl.textContent = '✓ Target achieved'; gradeEl.className = 'score-grade grade-pass'; }
+  else if (pct >= 60) { gradeEl.textContent = 'Getting closer — review and retry'; gradeEl.className = 'score-grade grade-near'; }
+  else { gradeEl.textContent = 'Needs more work — focus on weak areas'; gradeEl.className = 'score-grade grade-fail'; }
+
+  document.getElementById('r-review-count').textContent = `— ${questions.length} questions`;
+
+  document.getElementById('review-list').innerHTML = questions.map((q, idx) => {
+    const a = answers[q.id];
+    const empty = a === undefined || a === null || a === '' || (Array.isArray(a) && !a.length);
+
+    let status = 'skip', pts = '0';
+    let cardCls = 'rc-skip', statusCls = 'rcs-skip', statusTxt = 'Skipped';
+
+    if (!empty) {
+      let isCorrect = false;
+      if (q.type === 'MCQ') isCorrect = (a === q.correct);
+      else if (q.type === 'MSQ') {
+        const exp = [...(Array.isArray(q.correct)?q.correct:[q.correct])].sort().join();
+        const got = [...(Array.isArray(a)?a:[a])].sort().join();
+        isCorrect = exp === got;
+      } else {
+        isCorrect = String(a).trim().toLowerCase() === String(q.correct).trim().toLowerCase();
+      }
+      if (isCorrect) { status='correct'; pts='+4'; cardCls='rc-correct'; statusCls='rcs-correct'; statusTxt='Correct'; }
+      else { status='wrong'; pts=q.type==='MCQ'?'−1':'0'; cardCls='rc-wrong'; statusCls='rcs-wrong'; statusTxt='Wrong'; }
+    }
+
+    // Build answer rows
+    let answerHtml = '';
+    if (q.type === 'NAT') {
+      const corrAns = `<div class="rc-answer-row correct-ans"><span class="ans-icon">✓</span><span class="ans-label">Correct ans.</span><span class="ans-text">${q.correct}</span></div>`;
+      const yourAns = empty ? '' : (status === 'correct' ? '' : `<div class="rc-answer-row wrong-ans"><span class="ans-icon">✗</span><span class="ans-label">Your answer</span><span class="ans-text">${a}</span></div>`);
+      answerHtml = corrAns + yourAns;
+    } else if (q.options) {
+      const corrArr = Array.isArray(q.correct) ? q.correct : [q.correct];
+      const givenArr = empty ? [] : (Array.isArray(a) ? a : [a]);
+      const corrText = corrArr.map(i => `${KEYS[i]}. ${q.options[i]}`).join(', ');
+      answerHtml = `<div class="rc-answer-row correct-ans"><span class="ans-icon">✓</span><span class="ans-label">Correct</span><span class="ans-text">${corrText}</span></div>`;
+      if (!empty && status !== 'correct') {
+        const yourText = givenArr.map(i => `${KEYS[i]}. ${q.options[i]}`).join(', ');
+        answerHtml += `<div class="rc-answer-row wrong-ans"><span class="ans-icon">✗</span><span class="ans-label">Your answer</span><span class="ans-text">${yourText}</span></div>`;
+      }
+      if (empty) {
+        answerHtml += `<div class="rc-answer-row your-ans"><span class="ans-icon">–</span><span class="ans-label">Your answer</span><span class="ans-text">Not attempted</span></div>`;
+      }
+    }
+
+    return `<div class="review-card ${cardCls}">
+      <div class="rc-top">
+        <span class="rc-num">Q${idx+1} · ${q.type}</span>
+        <span class="rc-status ${statusCls}">${statusTxt}</span>
+        <span class="rc-pts">${pts}</span>
+      </div>
+      <div class="rc-question">${q.question}</div>
+      <div class="rc-answers">${answerHtml}</div>
+      ${q.explanation ? `<div class="rc-explanation"><div class="exp-label">Explanation</div><div class="exp-text">${q.explanation}</div></div>` : ''}
+    </div>`;
+  }).join('');
+
+  document.querySelector('.results-scroll').scrollTop = 0;
+}
+
+function retry() {
+  answers = {};
+  cur = 0;
+  const timeMins = parseInt(document.getElementById('cfg-time').value);
+  timerSec = timeMins * 60;
+  startMs = Date.now();
+  renderQuizMap();
+  renderQuestion();
+  startTimer();
+  show('s-quiz');
+}
+
+function newExam() {
+  clearInterval(timerInt);
+  document.getElementById('gen-btn').disabled = false;
+  show('s-setup');
+}
+</script>
+</body>
+</html>
