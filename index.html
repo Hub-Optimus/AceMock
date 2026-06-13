@@ -884,6 +884,47 @@ Works with any text — lecture notes, PDF content, chapter summaries. Minimum 3
   </div>
 </div>
 
+<!-- ═══ NOTES → QUIZ MODAL ═══ -->
+<div class="veil" id="notes-quiz-veil" onclick="if(event.target===this)closeNotesQuizModal()">
+  <div class="modal">
+    <div class="modal-title">Set up your quiz</div>
+    <div class="modal-sub">Choose style and model before generating — questions cost API credits.</div>
+
+    <div style="margin-bottom:14px">
+      <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.3px;margin-bottom:8px">Question Style</div>
+      <div style="display:flex;gap:8px">
+        <div class="style-toggle active" id="nq-style-standard" onclick="setNqStyle('standard')" style="flex:1;cursor:pointer">
+          <b style="display:block;font-size:13px">Standard</b>
+          <span style="font-size:10.5px;opacity:.75">Mixed difficulty</span>
+        </div>
+        <div class="style-toggle" id="nq-style-offline" onclick="setNqStyle('offline')" style="flex:1;cursor:pointer">
+          <b style="display:block;font-size:13px">🎯 Offline exam</b>
+          <span style="font-size:10.5px;opacity:.75">Masai mock style</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-bottom:18px">
+      <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.3px;margin-bottom:8px">AI Model</div>
+      <div style="display:flex;gap:8px">
+        <button class="model-btn" id="nq-claude-btn" onclick="setNqModel('claude')" style="flex:1">
+          🧠 Claude Haiku <span style="font-size:10px;padding:1px 5px;background:var(--indigo-l);color:var(--indigo);border-radius:4px;font-weight:700">Paid</span>
+          <div style="font-size:10px;font-weight:400;color:var(--text3);margin-top:2px">Best quality · ~$0.04</div>
+        </button>
+        <button class="model-btn active-groq" id="nq-groq-btn" onclick="setNqModel('groq')" style="flex:1">
+          ⚡ Groq (Llama) <span style="font-size:10px;padding:1px 5px;background:var(--cyan-l);color:var(--cyan);border-radius:4px;font-weight:700">Free</span>
+          <div style="font-size:10px;font-weight:400;color:var(--text3);margin-top:2px">Good quality · $0 cost</div>
+        </button>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="nav-btn" onclick="closeNotesQuizModal()">Cancel</button>
+      <button class="nav-btn primary" onclick="confirmNotesQuiz()">Generate quiz →</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ── State ─────────────────────────────────────────────
 let questions = [];
@@ -2670,10 +2711,41 @@ async function saveNotesToSupabase() {
 // ── Use notes for quiz ────────────────────────────────
 function useNotesForQuiz() {
   if (!notesText) { toast('Generate notes first'); return; }
+  // Reset modal to defaults
+  setNqStyle('standard');
+  setNqModel('groq');
+  document.getElementById('notes-quiz-veil').classList.add('open');
+}
+
+function closeNotesQuizModal() {
+  document.getElementById('notes-quiz-veil').classList.remove('open');
+}
+
+let nqStyle = 'standard';
+let nqModel = 'groq';
+
+function setNqStyle(s) {
+  nqStyle = s;
+  document.getElementById('nq-style-standard').classList.toggle('active', s === 'standard');
+  document.getElementById('nq-style-offline').classList.toggle('active', s === 'offline');
+}
+
+function setNqModel(m) {
+  nqModel = m;
+  document.getElementById('nq-claude-btn').className = 'model-btn' + (m === 'claude' ? ' active-claude' : '');
+  document.getElementById('nq-groq-btn').className = 'model-btn' + (m === 'groq' ? ' active-groq' : '');
+}
+
+function confirmNotesQuiz() {
+  closeNotesQuizModal();
+  // Apply chosen style and model to quiz settings
+  setStyle(nqStyle);
+  selectQuizModel(nqModel);
+  // Load notes into quiz content
   document.getElementById('content').value = notesText;
   rebuildParts();
   switchTab('quiz');
-  toast('✓ Notes loaded into quiz — generate your paper');
+  toast('✓ Notes loaded — hit Generate when ready');
 }
 
 // ── Download notes dropdown ───────────────────────────
