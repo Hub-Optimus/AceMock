@@ -2642,6 +2642,151 @@ async function getFreshQuestions() {
   btn.disabled = false; btn.textContent = '🔄 Fresh questions (Groq)';
 }
 
+
+// ── Save notes to Supabase ────────────────────────────
+async function saveNotesToSupabase() {
+  if (!notesText) { toast('No notes to save'); return; }
+  const btn = document.getElementById('btn-save-notes');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  const topic = document.getElementById('notes-topic').value.trim() || 'PM Module';
+  try {
+    if (!sb) throw new Error('Not connected to Supabase');
+    if (!currentUser) { show('s-auth'); return; }
+    const { error } = await sb.from('acemock_notes').insert({
+      user_id: currentUser.id,
+      topic,
+      notes: notesText,
+      created_at: new Date().toISOString()
+    });
+    if (error) throw error;
+    toast('✓ Notes saved to account');
+  } catch(e) {
+    toast('Save failed: ' + (e.message || 'error'));
+  }
+  btn.disabled = false;
+  btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Save to account';
+}
+
+// ── Use notes for quiz ────────────────────────────────
+function useNotesForQuiz() {
+  if (!notesText) { toast('Generate notes first'); return; }
+  document.getElementById('content').value = notesText;
+  rebuildParts();
+  switchTab('quiz');
+  toast('✓ Notes loaded into quiz — generate your paper');
+}
+
+// ── Download notes dropdown ───────────────────────────
+function toggleDlDropdown() {
+  const dd = document.getElementById('dl-dropdown');
+  dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+  // Close on outside click
+  setTimeout(() => {
+    document.addEventListener('click', function closeDl(e) {
+      if (!document.getElementById('dl-dropdown-wrap').contains(e.target)) {
+        dd.style.display = 'none';
+        document.removeEventListener('click', closeDl);
+      }
+    });
+  }, 10);
+}
+
+function downloadNotes(format) {
+  document.getElementById('dl-dropdown').style.display = 'none';
+  if (!notesText) { toast('No notes to download'); return; }
+  const topic = document.getElementById('notes-topic').value.trim() || 'PM Module';
+  const slug = topic.replace(/[^a-zA-Z0-9]+/g,'-').slice(0,40);
+  const stamp = new Date().toISOString().slice(0,10);
+
+  if (format === 'txt') {
+    const blob = new Blob([notesText], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `AceMock_Notes_${slug}_${stamp}.txt`;
+    a.click();
+  } else if (format === 'doc') {
+    const html = `<html><body style="font-family:Arial,sans-serif;font-size:12pt;line-height:1.6;padding:20px">${document.getElementById('notes-body').innerHTML}</body></html>`;
+    const blob = new Blob([html], { type: 'application/msword' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `AceMock_Notes_${slug}_${stamp}.doc`;
+    a.click();
+  } else if (format === 'pdf') {
+    const el = document.getElementById('notes-body');
+    html2pdf().set({
+      margin: [12,14],
+      filename: `AceMock_Notes_${slug}_${stamp}.pdf`,
+      image: { type:'jpeg', quality:0.97 },
+      html2canvas: { scale:2, backgroundColor:'#ffffff' },
+      jsPDF: { unit:'mm', format:'a4', orientation:'portrait' }
+    }).from(el).save();
+  }
+}
+
+// ── Load saved notes ──────────────────────────────────
+async function loadSavedNotes() {
+  const listEl = document.getElementById('saved-notes-list');
+  if (!sb || !currentUser) {
+    listEl.innerHTML = '<div class="hist-empty">Log in to see your saved notes.</div>';
+    return;
+  }
+  listEl.innerHTML = '<div class="hist-empty">Loading…</div>';
+  try {
+    const { data, error } = await sb.from('acemock_notes')
+      .select('id, topic, created_at, notes')
+      .eq('user_id', currentUser.id)
+      .order('created_at', { ascending: false })
+      .limit(50);
+    if (error) throw error;
+    if (!data || !data.length) {
+      listEl.innerHTML = '<div class="hist-empty">No saved notes yet. Generate notes and click "Save to account".</div>';
+      return;
+    }
+    listEl.innerHTML = data.map(n => {
+      const d = new Date(n.created_at);
+      const when = d.toLocaleDateString('en-IN',{day:'numeric',month:'short'}) + ', ' +
+                   d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+      const preview = (n.notes || '').slice(0,120).replace(/[#*`]/g,'') + '…';
+      return `<div class="saved-note-card">
+        <div style="flex:1;min-width:0">
+          <div class="snc-title">${esc(n.topic || 'Untitled')}</div>
+          <div class="snc-meta">${when}</div>
+          <div style="font-size:11.5px;color:var(--text3);margin-top:4px;line-height:1.5">${esc(preview)}</div>
+        </div>
+        <div class="snc-actions">
+          <button class="snc-btn" onclick="readNote('${n.id}')">Read</button>
+          <button class="snc-btn" onclick="quizFromNote('${n.id}')">→ Quiz</button>
+          <button class="snc-btn danger" onclick="deleteSavedNote('${n.id}')">Delete</button>
+        </div>
+      </div>`;
+    }).join('');
+    // store notes data for read/quiz
+    window._savedNotesCache = Object.fromEntries(data.map(n => [n.id, n]));
+  } catch(e) {
+    listEl.innerHTML = `<div class="hist-empty">Could not load notes: ${esc(e.message||'error')}</div>`;
+  }
+}
+
+function readNote(id) {
+  const n = window._savedNotesCache && window._savedNotesCache[id];
+  if (!n) { toast('Note not found'); return; }
+  notesText = n.notes;
+  document.getElementById('notes-topic').value = n.topic || '';
+  document.getElementById('notes-output-title').textContent = n.topic || 'Notes';
+  document.getElementById('notes-body').innerHTML = renderMarkdown(n.notes);
+  document.getElementById('notes-output').classList.add('show');
+  switchTab('notes');
+}
+
+function quizFromNote(id) {
+  const n = window._savedNotesCache && window._savedNotesCache[id];
+  if (!n) { toast('Note not found'); return; }
+  document.getElementById('content').value = n.notes;
+  rebuildParts();
+  switchTab('quiz');
+  toast('✓ Notes loaded — generate your quiz');
+}
+
 // Boot: decide between login screen and the app
 initAuth();
 setTimeout(() => loadCreditHistory(), 1500); // load after auth settles
