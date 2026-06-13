@@ -652,8 +652,11 @@ Works with any text — lecture notes, PDF content, chapter summaries. Minimum 3
       <!-- Uploaded files list -->
       <div id="uploaded-files-list" style="display:none;margin-bottom:14px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-          <span style="font-size:11.5px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.3px">Files queued</span>
-          <button onclick="clearAllFiles()" style="font-size:11.5px;color:var(--red);background:none;border:none;cursor:pointer;font-weight:600">✕ Clear all</button>
+          <span style="font-size:11.5px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.3px">Files queued <span id="file-count-badge" style="font-weight:400;color:var(--text3)"></span></span>
+          <div style="display:flex;gap:10px;align-items:center">
+            <span style="font-size:11.5px;color:var(--indigo);cursor:pointer;font-weight:600" onclick="document.getElementById('multi-file-input').click()">+ Add more</span>
+            <button onclick="clearAllFiles()" style="font-size:11.5px;color:var(--red);background:none;border:none;cursor:pointer;font-weight:600">✕ Clear all</button>
+          </div>
         </div>
         <div id="file-chips"></div>
       </div>
@@ -2182,7 +2185,18 @@ async function processMultipleFiles(files) {
     }
     try {
       const text = await extractTextFromFile(file);
-      if (!text || text.trim().length < 50) { toast(`Could not extract text from ${file.name}`); continue; }
+      if (!text || text.trim().length < 50) {
+        toast(`⚠ Could not extract text from ${file.name} — try TXT format`);
+        // Show a failed chip so user knows
+        const chipsEl = document.getElementById('file-chips');
+        chipsEl.innerHTML += `<span class="file-chip" style="border-color:var(--red-b);background:var(--red-l)">
+          <span class="chip-type" style="background:var(--red-l);color:var(--red)">FAILED</span>
+          ${esc(file.name.length > 28 ? file.name.slice(0,25)+'…' : file.name)}
+          <span style="color:var(--text3);font-size:11px">extraction failed</span>
+        </span>`;
+        document.getElementById('uploaded-files-list').style.display = 'block';
+        continue;
+      }
       // Auto-detect type from filename
       const nameLow = file.name.toLowerCase();
       const type = nameLow.includes('pre') || nameLow.includes('material') || nameLow.includes('note') || nameLow.includes('masai')
@@ -2289,6 +2303,9 @@ function renderFileChips() {
   vRow.style.display = 'block';
   btn.disabled = false;
   btn.lastChild.textContent = ` Generate Notes from ${uploadedFiles.length} file${uploadedFiles.length>1?'s':''}`;
+
+  const countBadge = document.getElementById('file-count-badge');
+  if (countBadge) countBadge.textContent = `(${uploadedFiles.length}/5${uploadedFiles.length < 5 ? ' — click "+ Add more" to add' : ''})`;
 
   const typeLabels = { masai:'Masai', transcript:'Transcript', other:'Other' };
   chipsEl.innerHTML = uploadedFiles.map((f, i) => {
