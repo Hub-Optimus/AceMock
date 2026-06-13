@@ -1,4 +1,4 @@
-export const config = { runtime: 'nodejs', maxDuration: 60 };
+export const config = { runtime: 'edge' };
 
 export default async function handler(req) {
   if (req.method === 'OPTIONS') {
@@ -78,6 +78,25 @@ End with a QUICK REVISION TABLE of all frameworks. Output clean markdown only.`;
       for (const img of masaiImages.slice(0, 6)) {
         contentParts.push({ type: 'image', source: { type: 'base64', media_type: img.mediaType || 'image/jpeg', data: img.data } });
       }
+    }
+
+    // Route to Groq if selected (free, for testing)
+    if (useGroq) {
+      const groqKey = process.env.GROQ_API_KEY;
+      if (!groqKey) return new Response(JSON.stringify({ error: 'GROQ_API_KEY not configured' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+      const groqPrompt = `Topic: ${topicTitle || 'PM Module'}\n\n${masaiText ? '=== MASAI MATERIAL ===\n' + masaiText + '\n\n' : ''}${transcriptText ? '=== TRANSCRIPT ===\n' + transcriptText : ''}\n\nGenerate structured PM study notes covering all concepts. For each concept: What it is, Why it's used, Real-life examples (Indian companies), PM impact, From the material, Exam angle. End with a Quick Revision Table.`;
+      const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Authorization': \`Bearer \${groqKey}\`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: 'llama-3.3-70b-versatile', temperature: 0.4, max_tokens: 4096, messages: [{ role: 'user', content: groqPrompt }] }),
+      });
+      if (!groqRes.ok) {
+        const e = await groqRes.json().catch(() => ({}));
+        return new Response(JSON.stringify({ error: e.error?.message || \`Groq error \${groqRes.status}\` }), { status: 502, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+      }
+      const groqData = await groqRes.json();
+      const notes = groqData.choices?.[0]?.message?.content || '';
+      return new Response(JSON.stringify({ notes }), { status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
     }
 
     const res = await fetch('https://api.anthropic.com/v1/messages', {
