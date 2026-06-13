@@ -69,6 +69,9 @@ a{color:var(--indigo);text-decoration:none}
 .cfg-select:focus{border-color:var(--indigo)}
 
 .type-row{display:flex;gap:8px;margin-top:16px}
+.style-toggle{flex:1;padding:9px 12px;border:1.5px solid var(--border);border-radius:9px;background:var(--bg);cursor:pointer;transition:all .15s;text-align:center}
+.style-toggle:hover{border-color:var(--indigo-b)}
+.style-toggle.active{border-color:var(--indigo);background:var(--indigo-l);color:var(--indigo)}
 .type-toggle{flex:1;padding:9px 8px;border:1.5px solid var(--border);border-radius:9px;font-size:12.5px;font-weight:600;color:var(--text2);background:var(--bg);text-align:center;user-select:none;transition:all .15s}
 .type-toggle:hover{border-color:var(--border2)}
 .type-toggle.on.mcq{border-color:var(--indigo);background:var(--indigo-l);color:var(--indigo)}
@@ -431,8 +434,7 @@ Works with any text — lecture notes, PDF content, chapter summaries. Minimum 3
 
     <div class="config-grid">
       <div class="cfg-block">
-        <span class="cfg-label">Questions</span>
-        <select class="cfg-select" id="cfg-count" onchange="onCfgChange('count')">
+        <span class="cfg-label">Questions</span>        <select class="cfg-select" id="cfg-count" onchange="onCfgChange('count')">
           <option value="10">10 questions</option>
           <option value="15" selected>15 questions</option>
           <option value="20">20 questions</option>
@@ -468,6 +470,20 @@ Works with any text — lecture notes, PDF content, chapter summaries. Minimum 3
         </div>
         <div class="type-toggle on nat" data-type="NAT" onclick="toggleType(this)">
           NAT<span class="type-sub">Numerical</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:14px">
+      <span class="cfg-label">Question style</span>
+      <div class="type-row" style="gap:8px">
+        <div class="style-toggle active" id="style-standard" onclick="setStyle('standard')">
+          <b style="display:block;font-size:13px">Standard</b>
+          <span style="font-size:10.5px;opacity:.75">Mixed difficulty</span>
+        </div>
+        <div class="style-toggle" id="style-offline" onclick="setStyle('offline')">
+          <b style="display:block;font-size:13px">🎯 Offline exam</b>
+          <span style="font-size:10.5px;opacity:.75">Masai mock style</span>
         </div>
       </div>
     </div>
@@ -532,6 +548,10 @@ Works with any text — lecture notes, PDF content, chapter summaries. Minimum 3
 <!-- ═══ SCREEN 4: RESULTS ═══ -->
 <div class="screen" id="s-results">
   <div class="results-scroll">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+      <button class="nav-btn" id="results-back-btn" onclick="resultsBack()">← Back</button>
+      <span id="results-section-label" style="font-size:12.5px;color:var(--text3)"></span>
+    </div>
     <div class="score-hero">
       <div style="position:relative">
         <div class="score-num" id="r-score">0 <span class="score-denom" id="r-denom">/ 0</span></div>
@@ -610,6 +630,13 @@ let timerInt  = null;
 let startMs   = 0;
 let lastTimeMins = 30;
 let activeTypes = new Set(['MCQ','MSQ','NAT']);
+let examStyle = 'standard'; // 'standard' | 'offline'
+
+function setStyle(s) {
+  examStyle = s;
+  document.getElementById('style-standard').classList.toggle('active', s==='standard');
+  document.getElementById('style-offline').classList.toggle('active', s==='offline');
+}
 let currentSectionTitle = '';
 let viewingHistory = false;
 let allSectionResults = {};
@@ -1095,6 +1122,7 @@ async function startGeneration(overrideText) {
     questions  = qs;
     answers    = {};
     cur        = 0;
+    renderedQId = null;
     timerSec   = timeMins * 60;
     startMs    = Date.now();
 
@@ -1134,27 +1162,47 @@ async function callGroq(content, count, types) {
   const dist = typeMap(count, types, count);
   const breakdown = types.map(t => `${dist[t]} ${t}`).join(', ');
 
-  const systemPrompt = `You are a senior exam-paper setter for the BITSoM × Masai "Product Management with Generative & Agentic AI" certification. Your questions must match the REAL offline exam style: scenario-based and application-level, never simple recall.
+  const offlinePrompt = `You are a senior exam-paper setter replicating the BITSoM x Masai offline exam exactly.
 
-Return ONLY a JSON array. No markdown, no preamble, no explanation. Just the raw JSON array.
+Return ONLY a JSON array. No markdown fences, no preamble.
 
 JSON format:
 [
-  {"id":1,"type":"MCQ","question":"...","options":["A","B","C","D"],"correct":2,"explanation":"..."},
-  {"id":2,"type":"MSQ","question":"...","options":["A","B","C","D"],"correct":[0,2],"explanation":"..."},
+  {"id":1,"type":"MCQ","question":"...","options":["A. ...","B. ...","C. ...","D. ..."],"correct":2,"explanation":"..."},
+  {"id":2,"type":"MSQ","question":"...","options":["A. ...","B. ...","C. ...","D. ..."],"correct":[0,2],"explanation":"..."},
+  {"id":3,"type":"NAT","question":"...","correct":"3000","explanation":"Step 1: ..."}
+]
+
+MANDATORY RULES:
+1. SCENARIO-FIRST: Every question opens with a named Indian professional in a real business situation. The question tests APPLY not RECALL.
+2. BANNED stems: What is the term for, What is the primary purpose of, Define, Which of the following describes. Zero tolerance.
+3. MCQ: 4 options (A. B. C. D.), one correct, correct is 0-based integer. Distractors are genuinely tempting wrong paths.
+4. MSQ ABSOLUTE BAN on option templates: A and B are high indicating, A and C are low indicating, B and C are high indicating, A and C are independent. These are FORBIDDEN. Instead: list specific named actions or decisions (X),(Y),(Z) and ask which apply. Each option is a distinct named action, never a combination verdict.
+5. NAT = NUMBERS ONLY. correct is a number string. Show formula and every step in explanation.
+6. Difficulty: 20 percent moderate, 50 percent application, 30 percent multi-concept.
+7. Explanation: why correct is right plus one sentence per wrong option.
+8. Spread questions across all topics in the content.`;
+
+  const standardPrompt = `You are an expert exam question writer for a Product Management with Generative and Agentic AI certification.
+
+Return ONLY a JSON array. No markdown, no preamble.
+
+JSON format:
+[
+  {"id":1,"type":"MCQ","question":"...","options":["A. ...","B. ...","C. ...","D. ..."],"correct":2,"explanation":"..."},
+  {"id":2,"type":"MSQ","question":"...","options":["A. ...","B. ...","C. ...","D. ..."],"correct":[0,2],"explanation":"..."},
   {"id":3,"type":"NAT","question":"...","correct":"3000","explanation":"..."}
 ]
 
-MANDATORY STYLE RULES:
-1. SCENARIO-FIRST: Open most questions with a short realistic scenario using a named person or company in Indian context (e.g. "Priya is a PM at a fintech startup...", "Ravi's ed-tech team notices..."). The student must APPLY a concept from the content to the scenario, not recall a definition.
-2. BANNED stems: "What is the term for...", "What is the primary purpose of...", "What is the definition of...", "Which of the following describes...". Never ask the student to name or define a term.
-3. MCQ: exactly 4 options, "correct" is one integer index 0-3. Distractors must be plausible conclusions or actions a weaker student would genuinely pick — never obviously wrong, never jokes.
-4. MSQ: exactly 4 options, "correct" is an array of 2-3 indices. Prefer mapping style: the scenario lists items (X), (Y), (Z) and each option maps one item to a concept — student selects the correct mappings. CRITICAL: all 4 options MUST be completely independent statements — no option may contain, imply, or restate another option. Never write two options that overlap in meaning even partially. Test: could a student reasonably believe two options say the same thing? If yes, rewrite.
-5. NAT = NUMERICAL Answer Type. "correct" MUST be a single number as a string (e.g. "3000", "2.5", "210"). Build a real calculation using formulas from the content (CLV, CAC, RPS, AOV, conversion rate, ROAS, retention, LTV:CAC, sprint capacity, campaign budget). Give all input numbers in the question and state the formula if the content defines one. NEVER ask for a word, term, or name in NAT — only numbers.
-6. Difficulty mix: about 30% moderate single-concept, 50% application, 20% multi-step or multi-concept analysis.
-7. Explanations: state why the correct answer is right, then one short line on why EACH wrong option fails. For NAT, show the full calculation step by step.
-8. Base every question strictly on the provided content. For NAT you may invent realistic numbers, but the formula/concept must come from the content.
-9. Cover different sections of the content — do not cluster all questions on the first topic.`;
+Rules:
+1. Open most questions with a scenario using a named person.
+2. BANNED: What is the term for, What is the primary purpose of, Define.
+3. MCQ: 4 options, one correct index 0-3.
+4. MSQ: 4 options, correct is array of 2-3 indices. FORBIDDEN templates: A and B are high indicating, A and C are low indicating, B and C are high, A and C are independent. Each option must be a completely independent statement.
+5. NAT = number string only. Show full calculation in explanation.
+6. Explanations: why correct is right plus why each wrong fails.`;
+
+  const systemPrompt = examStyle === 'offline' ? offlinePrompt : standardPrompt
 
   const userPrompt = `Generate exactly ${count} questions. Breakdown: ${breakdown}.
 
@@ -1229,9 +1277,19 @@ function isAnswered(q) {
   return true;
 }
 
+let renderedQId = null; // track which question is currently in DOM
+
 function renderQuestion(animate) {
   const q = questions[cur];
   if (!q) return;
+
+  // If it's a NAT question already rendered, only refresh the map — don't
+  // blow away the input element (that's what caused the garbage answers).
+  if (q.type === 'NAT' && renderedQId === q.id && !animate) {
+    renderQuizMap();
+    return;
+  }
+  renderedQId = q.id;
   renderQuizMap();
 
   const KEYS = ['A','B','C','D'];
@@ -1411,6 +1469,7 @@ async function openHistory() {
         </div>
         <div class="hist-actions">
           <button class="part-btn" onclick="reviewAttempt('${r.id}')">Revise</button>
+          <button class="part-btn" style="border-color:var(--red);color:var(--red)" onclick="deleteAttempt('${r.id}',this)">Delete</button>
         </div>
       </div>`;
     }).join('');
@@ -1437,7 +1496,19 @@ async function reviewAttempt(id) {
   }
 }
 
-// ── PDF download — clean text layout (no screenshot blur) ─
+async function deleteAttempt(id, btn) {
+  if (!confirm('Delete this attempt? This cannot be undone.')) return;
+  btn.disabled = true; btn.textContent = '…';
+  try {
+    const { error } = await sb.from('acemock_attempts').delete().eq('id', id);
+    if (error) throw error;
+    toast('Attempt deleted');
+    openHistory(); // refresh list
+  } catch (e) {
+    toast('Delete failed: ' + (e.message || 'error'));
+    btn.disabled = false; btn.textContent = 'Delete';
+  }
+}
 function buildPDFHTML(qs, ans, title, scoreStr) {
   const KEYS = ['A','B','C','D'];
   const items = qs.map((q, qi) => {
@@ -1624,6 +1695,11 @@ function buildResults(elapsed) {
   else { gradeEl.textContent = 'Needs more work — focus on weak areas'; gradeEl.className = 'score-grade grade-fail'; }
 
   document.getElementById('r-review-count').textContent = `— ${questions.length} questions`;
+  document.getElementById('results-section-label').textContent =
+    currentSectionTitle ? `Section: ${currentSectionTitle}` : '';
+  // back goes to history when reviewing, setup otherwise
+  document.getElementById('results-back-btn').dataset.dest =
+    viewingHistory ? 'history' : 'setup';
 
   // Section flow: record this section's score and offer the next one
   const oldNext = document.getElementById('next-part-btn');
@@ -1734,9 +1810,15 @@ function buildResults(elapsed) {
   document.querySelector('.results-scroll').scrollTop = 0;
 }
 
+function resultsBack() {
+  const dest = document.getElementById('results-back-btn').dataset.dest;
+  if (dest === 'history') { viewingHistory = false; openHistory(); }
+  else show('s-setup');
+}
+
 function retry() {
-  answers = {};
   cur = 0;
+  renderedQId = null;
   timerSec = lastTimeMins * 60;
   startMs = Date.now();
   renderQuizMap();
