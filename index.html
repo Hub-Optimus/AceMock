@@ -777,6 +777,9 @@ Works with any text — lecture notes, PDF content, chapter summaries. Minimum 3
     <div class="results-actions" id="results-actions">
       <button class="btn-restart" onclick="retry()">Retry same paper</button>
       <button class="btn-new" onclick="newExam()">New transcript</button>
+      <button class="btn-new" id="fresh-btn" onclick="getFreshQuestions()" style="border-color:var(--cyan);color:var(--cyan)">
+        🔄 Fresh questions (Groq)
+      </button>
       <button class="btn-download" id="dl-btn" onclick="downloadPDF()">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Download this section
@@ -1349,7 +1352,21 @@ async function startGeneration(overrideText) {
   }, 2200);
 
   try {
-    const qs = await callGroq(content, count, types);
+    // Multi-section: preload ALL questions upfront in 2 parallel calls
+    if (parts.length > 1 && activePart === -1) {
+      document.getElementById('load-title').textContent = 'Loading all sections upfront…';
+      await preloadAllSections(count, types);
+      activePart = 0;
+      currentSectionTitle = (topicName || parts[0].title || 'Section') + '_1';
+    }
+
+    let qs;
+    if (preloadedSections[activePart] && preloadedSections[activePart].length) {
+      qs = preloadedSections[activePart];
+    } else {
+      // Single section or fallback — 2 parallel calls
+      qs = await callGroq(content, count, types);
+    }
     clearInterval(stepInt);
     if (!qs || !qs.length) throw new Error('No questions returned');
 
@@ -2315,15 +2332,15 @@ async function generateNotes() {
     let combinedSources = [];
     masaiFiles.forEach((f, i) => combinedSources.push({
       label: masaiFiles.length > 1 ? `MASAI MATERIAL ${i+1}` : 'MASAI OFFICIAL MATERIAL',
-      text: f.text.slice(0, Math.floor(14000 / uploadedFiles.length))
+      text: f.text
     }));
     transcriptFiles.forEach((f, i) => combinedSources.push({
       label: transcriptFiles.length > 1 ? `LECTURE TRANSCRIPT ${i+1}` : 'LECTURE TRANSCRIPT',
-      text: f.text.slice(0, Math.floor(14000 / uploadedFiles.length))
+      text: f.text
     }));
     otherFiles.forEach((f, i) => combinedSources.push({
       label: `ADDITIONAL MATERIAL ${i+1}`,
-      text: f.text.slice(0, Math.floor(14000 / uploadedFiles.length))
+      text: f.text
     }));
 
     // Vision: only from masai-type PDFs, only when enabled
@@ -2373,8 +2390,105 @@ async function deleteSavedNote(id) {
   }
 }
 
+// ── Credit tracker ───────────────────────────────────
+// Tracks estimated API spend locally in Supabase
+// Sonnet: input $3/M, output $15/M | Haiku: input $0.8/M, output $4/M
+const CREDIT_BUDGET = 5.00; // update when you top up
+const SONNET_IN = 3.00 / 1_000_000, SONNET_OUT = 15.00 / 1_000_000;
+const HAIKU_IN  = 0.80 / 1_000_000, HAIKU_OUT  =  4.00 / 1_000_000;
+const TOKENS_PER_CHAR = 0.25; // ~4 chars per token
+
+let totalSpent = 0;
+
+async function loadCreditHistory() {
+  if (!sb || !currentUser) return;
+  try {
+    const { data } = await sb.from('acemock_usage')
+      .select('cost')
+      .eq('user_id', currentUser.id);
+    if (data) totalSpent = data.reduce((s, r) => s + (r.cost || 0), 0);
+    renderCreditBar();
+  } catch(e) {}
+}
+
+function trackUsage(type, inputChars) {
+  // Estimate tokens and cost
+  const inputTokens  = Math.ceil(inputChars * TOKENS_PER_CHAR) + 500; // +500 for system prompt
+  const outputTokens = 4096;
+  let cost = 0;
+  if (type === 'notes') {
+    cost = (inputTokens * SONNET_IN) + (outputTokens * SONNET_OUT);
+  } else {
+    // quiz = 2 Haiku calls
+    cost = 2 * ((inputTokens * HAIKU_IN) + (outputTokens * HAIKU_OUT));
+  }
+  totalSpent += cost;
+  renderCreditBar();
+  // Save to Supabase async (fire and forget)
+  if (sb && currentUser) {
+    sb.from('acemock_usage').insert({
+      user_id: currentUser.id,
+      type,
+      cost,
+      created_at: new Date().toISOString()
+    }).then(() => {}).catch(() => {});
+  }
+}
+
+function renderCreditBar() {
+  const bar = document.getElementById('credit-bar');
+  const fill = document.getElementById('credit-fill');
+  const label = document.getElementById('credit-label');
+  if (!bar || !currentUser) return;
+  bar.style.display = 'flex';
+  const remaining = Math.max(0, CREDIT_BUDGET - totalSpent);
+  const pct = (remaining / CREDIT_BUDGET) * 100;
+  fill.style.width = pct + '%';
+  fill.style.background = pct > 40 ? 'var(--green)' : pct > 15 ? 'var(--amber)' : 'var(--red)';
+  label.textContent = `$${remaining.toFixed(2)} left`;
+  bar.className = 'credit-bar' + (pct <= 15 ? ' danger' : pct <= 40 ? ' warn' : '');
+}
+
+// Track notes generation usage
+const _origGenerateNotes = generateNotes;
+generateNotes = async function() {
+  await _origGenerateNotes();
+  if (notesText) trackUsage('notes', (uploadedFiles.reduce((s,f) => s + f.text.length, 0)));
+};
+
+// ── Fresh questions (Groq) ─────────────────────────────
+async function getFreshQuestions() {
+  if (!questions.length) return;
+  freshMode = true;
+  const btn = document.getElementById('fresh-btn');
+  btn.disabled = true; btn.textContent = '🔄 Getting fresh questions…';
+  try {
+    const content = document.getElementById('content').value.trim() || questions.map(q => q.question).join('\n');
+    const count = questions.length;
+    const types = [...new Set(questions.map(q => q.type))];
+    const qs = await callGroq(content, count, types);
+    if (!qs || !qs.length) throw new Error('No questions returned');
+    questions  = qs;
+    answers    = {};
+    cur        = 0;
+    renderedQId = null;
+    timerSec   = lastTimeMins * 60;
+    startMs    = Date.now();
+    renderQuizMap();
+    renderQuestion();
+    startTimer();
+    show('s-quiz');
+    toast('✓ Fresh questions from Groq (free)');
+  } catch(e) {
+    toast('Fresh questions failed: ' + (e.message || 'error'));
+  }
+  freshMode = false;
+  btn.disabled = false; btn.textContent = '🔄 Fresh questions (Groq)';
+}
+
 // Boot: decide between login screen and the app
 initAuth();
+setTimeout(() => loadCreditHistory(), 1500); // load after auth settles
 </script>
 </body>
 </html>
