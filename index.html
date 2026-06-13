@@ -2349,7 +2349,23 @@ function clearAllFiles() {
   document.getElementById('multi-drop-zone').classList.remove('has-files');
 }
 
-function onPasteTextChange() {
+function renderMarkdown(md) {
+  return (md || '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/^## (.+)$/gm,'<h2 style="font-size:15px;font-weight:700;color:var(--text);margin:18px 0 6px;padding-bottom:4px;border-bottom:1px solid var(--border)">$1</h2>')
+    .replace(/^### (.+)$/gm,'<h3 style="font-size:13.5px;font-weight:600;color:var(--indigo);margin:12px 0 4px">$1</h3>')
+    .replace(/^# (.+)$/gm,'<h2 style="font-size:16px;font-weight:700;color:var(--text);margin:18px 0 6px">$1</h2>')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/^> \*\*Exam angle:\*\*\s*(.+)$/gm,'<blockquote style="border-left:3px solid var(--indigo);padding:8px 12px;background:var(--indigo-l);border-radius:0 8px 8px 0;margin:10px 0;font-size:12.5px"><strong>Exam angle:</strong> $1</blockquote>')
+    .replace(/^> (.+)$/gm,'<blockquote style="border-left:3px solid var(--indigo);padding:8px 12px;background:var(--indigo-l);border-radius:0 8px 8px 0;margin:10px 0;font-size:12.5px">$1</blockquote>')
+    .replace(/^---$/gm,'<hr style="border:none;border-top:1px solid var(--border);margin:16px 0">')
+    .replace(/^[-*] (.+)$/gm,'<li style="margin-bottom:3px">$1</li>')
+    .replace(/(<li[^>]*>[\s\S]*?<\/li>\n?)+/g,s=>`<ul style="padding-left:20px;margin:6px 0">${s}</ul>`)
+    .replace(/\n{2,}/g,'<br><br>')
+    .replace(/\n/g,'<br>');
+}
+
+
   const val = document.getElementById('notes-paste-text').value.trim();
   const words = val ? val.split(/\s+/).length : 0;
   const statusEl = document.getElementById('paste-text-status');
