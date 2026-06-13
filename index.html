@@ -2483,6 +2483,7 @@ async function generateNotes() {
     if (!notesText) throw new Error('No notes returned');
     document.getElementById('btn-save-notes').disabled = false;
     toast('✓ Notes generated');
+    trackUsage('notes', uploadedFiles.reduce((s,f) => s + f.text.length, 0));
   } catch(err) {
     document.getElementById('notes-err').innerHTML = `<div class="err-box">Notes generation failed: ${err.message}</div>`;
   }
@@ -2562,12 +2563,7 @@ function renderCreditBar() {
   bar.className = 'credit-bar' + (pct <= 15 ? ' danger' : pct <= 40 ? ' warn' : '');
 }
 
-// Track notes generation usage
-const _origGenerateNotes = generateNotes;
-generateNotes = async function() {
-  await _origGenerateNotes();
-  if (notesText) trackUsage('notes', (uploadedFiles.reduce((s,f) => s + f.text.length, 0)));
-};
+// Track notes generation usage (called directly inside generateNotes)
 
 // ── Fresh questions (Groq) ─────────────────────────────
 async function getFreshQuestions() {
