@@ -1557,7 +1557,7 @@ Rules:
 CONTENT:
 ${sampleContent(content)}`;
 
-  const res = await fetch('/api/generate', {
+  const res = await fetch('https://acemock-generate.prakashkoulagi1996.workers.dev', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({
@@ -2526,7 +2526,7 @@ async function generateNotes() {
     let diagramImages = [];
     // (vision extraction skipped here — handled separately if needed)
 
-    const res = await fetch('/api/notes', {
+    const res = await fetch('https://acemock-notes.prakashkoulagi1996.workers.dev', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
