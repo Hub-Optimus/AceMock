@@ -2407,7 +2407,7 @@ function renderMarkdown(md) {
     .replace(/\n/g,'<br>');
 }
 
-
+function onPasteTextChange() {
   const val = document.getElementById('notes-paste-text').value.trim();
   const words = val ? val.split(/\s+/).length : 0;
   const statusEl = document.getElementById('paste-text-status');
