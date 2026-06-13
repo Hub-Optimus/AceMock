@@ -380,32 +380,6 @@ a{color:var(--indigo);text-decoration:none}
 .nub-status{font-size:11.5px;margin-top:6px;font-weight:600}
 .has-file .nub-status{color:var(--green)}
 
-/* Multi drop zone */
-.multi-drop-zone{border:2px dashed var(--border2);border-radius:14px;padding:28px 20px;cursor:pointer;transition:all .2s;background:var(--bg2);text-align:center;margin-bottom:12px}
-.multi-drop-zone:hover,.multi-drop-zone.drag-over{border-color:var(--indigo);background:var(--indigo-l)}
-.multi-drop-zone.has-files{border-color:var(--green);border-style:solid;background:var(--green-l)}
-.mdz-icon{width:48px;height:48px;border-radius:12px;background:var(--bg3);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;border:1px solid var(--border);color:var(--text2)}
-.multi-drop-zone.drag-over .mdz-icon{background:var(--indigo-l);border-color:var(--indigo);color:var(--indigo)}
-.mdz-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px}
-.mdz-sub{font-size:12px;color:var(--text3)}
-
-/* File chips */
-.file-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:8px;background:var(--bg3);border:1px solid var(--border);font-size:12px;color:var(--text);margin:0 6px 6px 0}
-.file-chip .chip-type{font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;text-transform:uppercase}
-.chip-masai{background:var(--indigo-l);color:var(--indigo)}
-.chip-transcript{background:var(--cyan-l);color:var(--cyan)}
-.chip-other{background:var(--bg3);color:var(--text3)}
-.file-chip .chip-remove{cursor:pointer;color:var(--text3);font-size:14px;line-height:1;margin-left:2px}
-.file-chip .chip-remove:hover{color:var(--red)}
-
-/* Vision toggle */
-.vision-toggle-row{margin-bottom:14px;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;background:var(--bg2)}
-.vision-toggle-label{display:flex;align-items:center;gap:12px;cursor:default}
-.vtoggle-track{width:36px;height:20px;border-radius:10px;background:var(--border2);cursor:pointer;position:relative;transition:background .2s;flex-shrink:0}
-.vtoggle-track.on{background:var(--violet)}
-.vtoggle-thumb{position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
-.vtoggle-track.on .vtoggle-thumb{transform:translateX(16px)}
-
 .notes-topic-field{margin-bottom:14px}
 .notes-topic-field label{display:block;font-size:11.5px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.3px;margin-bottom:5px}
 .notes-topic-field input{width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:13.5px;color:var(--text);background:var(--bg);outline:none;transition:border .15s}
@@ -414,11 +388,6 @@ a{color:var(--indigo);text-decoration:none}
 .notes-gen-btn{width:100%;padding:14px;background:var(--violet);color:#fff;border:none;border-radius:11px;font-size:15px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .15s;margin-bottom:14px}
 .notes-gen-btn:hover{background:#6d28d9;transform:translateY(-1px)}
 .notes-gen-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
-.model-selector-row{display:flex;gap:8px;margin-bottom:14px}
-.model-btn{flex:1;padding:10px 12px;border-radius:10px;border:1.5px solid var(--border);background:var(--bg);font-size:12.5px;font-weight:600;color:var(--text2);cursor:pointer;transition:all .15s;text-align:center}
-.model-btn:hover{border-color:var(--border2)}
-.model-btn.active-claude{border-color:var(--violet);background:var(--violet-l);color:var(--violet)}
-.model-btn.active-groq{border-color:var(--cyan);background:var(--cyan-l);color:var(--cyan)}
 
 .notes-output{display:none;margin-top:4px}
 .notes-output.show{display:block}
@@ -632,88 +601,33 @@ Works with any text — lecture notes, PDF content, chapter summaries. Minimum 3
 
     <!-- ══ NOTES TAB ══ -->
     <div class="tab-pane" id="tab-notes">
-      <p class="setup-tagline">Drop up to 5 files (pre-read, post-lecture, transcripts) — Sonnet reads all, merges intelligently, one final set of notes.</p>
+      <p class="setup-tagline">Upload Masai PDF + lecture transcript → Claude Sonnet generates enhanced notes → save and feed directly into quiz.</p>
 
       <div class="notes-topic-field">
         <label for="notes-topic">Topic / Module name</label>
-        <input id="notes-topic" type="text" placeholder="e.g. Module 2 — Consumer Behaviour &amp; Social Media">
+        <input id="notes-topic" type="text" placeholder="e.g. Module 2 — Consumer Behaviour & Social Media">
       </div>
 
-      <!-- Multi-file drop zone -->
-      <div class="multi-drop-zone" id="multi-drop-zone"
-        ondragover="handleMultiDragOver(event)"
-        ondragleave="handleMultiDragLeave(event)"
-        ondrop="handleMultiDrop(event)"
-        onclick="document.getElementById('multi-file-input').click()">
-        <input type="file" id="multi-file-input" accept=".pdf,.txt,.docx,.doc"
-          multiple style="display:none" onchange="handleMultiFileSelect(event)">
-        <div class="mdz-icon">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      <div class="notes-upload-row">
+        <!-- Masai PDF upload -->
+        <div class="notes-upload-box" id="masai-upload-box" onclick="document.getElementById('masai-file-input').click()">
+          <div class="nub-label">📄 Masai Official PDF</div>
+          <div class="nub-sub">Official module notes (optional)</div>
+          <div class="nub-status" id="masai-status">Click to upload PDF</div>
+          <input type="file" id="masai-file-input" accept=".pdf,.txt,.docx" style="display:none" onchange="handleNotesFile(event,'masai')">
         </div>
-        <div class="mdz-title">Drop files here or click to browse</div>
-        <div class="mdz-sub">PDF, TXT, DOCX · up to 5 files · pre-read, post-lecture, transcripts — all welcome</div>
-      </div>
-
-      <!-- Uploaded files list -->
-      <div id="uploaded-files-list" style="display:none;margin-bottom:14px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-          <span style="font-size:11.5px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.3px">Files queued <span id="file-count-badge" style="font-weight:400;color:var(--text3)"></span></span>
-          <div style="display:flex;gap:10px;align-items:center">
-            <span style="font-size:11.5px;color:var(--indigo);cursor:pointer;font-weight:600" onclick="document.getElementById('multi-file-input').click()">+ Add more</span>
-            <button onclick="clearAllFiles()" style="font-size:11.5px;color:var(--red);background:none;border:none;cursor:pointer;font-weight:600">✕ Clear all</button>
-          </div>
-        </div>
-        <div id="file-chips"></div>
-      </div>
-
-      <!-- Vision toggle (off by default) -->
-      <div class="vision-toggle-row" id="vision-toggle-row" style="display:none">
-        <label class="vision-toggle-label">
-          <div style="flex:1">
-            <div style="font-size:13px;font-weight:600;color:var(--text)">🔍 Diagram detection (Vision)</div>
-            <div style="font-size:11.5px;color:var(--text3);margin-top:2px">ON only if PDF has custom diagrams. ~$0.005 per diagram page found.</div>
-          </div>
-          <div class="vtoggle-track" id="vtoggle-track" onclick="toggleVision()">
-            <div class="vtoggle-thumb" id="vtoggle-thumb"></div>
-          </div>
-        </label>
-      </div>
-
-      <!-- Paste text area (for LMS screenshots / image PDFs) -->
-      <div style="margin-bottom:14px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-          <label style="font-size:11.5px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.3px">
-            📋 Paste text directly
-          </label>
-          <span style="font-size:11px;color:var(--text3)">For Masai LMS pre-reads — select all on the page, copy, paste here</span>
-        </div>
-        <textarea id="notes-paste-text"
-          style="width:100%;min-height:100px;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;color:var(--text);background:var(--bg2);outline:none;resize:vertical;line-height:1.6;transition:border .15s;font-family:inherit"
-          placeholder="Paste any text here — LMS pre-read, copied webpage, any material that won't upload as a file. This merges with your uploaded files above."
-          oninput="onPasteTextChange()"
-          onfocus="this.style.borderColor='var(--violet)'"
-          onblur="this.style.borderColor='var(--border)'"></textarea>
-        <div id="paste-text-status" style="font-size:11px;color:var(--text3);margin-top:4px;display:none"></div>
-      </div>
-
-      <!-- AI Model selector -->
-      <div style="margin-bottom:12px">
-        <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.3px;margin-bottom:6px">AI Model for Notes</div>
-        <div class="model-selector-row">
-          <button class="model-btn active-claude" id="model-claude-btn" onclick="selectNotesModel('claude')">
-            🧠 Claude Sonnet <span style="font-size:10px;padding:1px 5px;background:var(--violet-l);color:var(--violet);border-radius:4px;font-weight:700">Recommended</span>
-            <div style="font-size:10px;font-weight:400;color:var(--text3);margin-top:2px">Best quality · ~$0.11/session</div>
-          </button>
-          <button class="model-btn" id="model-groq-btn" onclick="selectNotesModel('groq')">
-            ⚡ Groq (Llama) <span style="font-size:10px;padding:1px 5px;background:var(--cyan-l);color:var(--cyan);border-radius:4px;font-weight:700">Free</span>
-            <div style="font-size:10px;font-weight:400;color:var(--text3);margin-top:2px">Good quality · $0 cost</div>
-          </button>
+        <!-- Transcript upload -->
+        <div class="notes-upload-box" id="transcript-upload-box" onclick="document.getElementById('transcript-file-input').click()">
+          <div class="nub-label">🎙️ Lecture Transcript</div>
+          <div class="nub-sub">Raw transcript or text notes (optional)</div>
+          <div class="nub-status" id="transcript-status">Click to upload PDF/TXT</div>
+          <input type="file" id="transcript-file-input" accept=".pdf,.txt,.docx" style="display:none" onchange="handleNotesFile(event,'transcript')">
         </div>
       </div>
 
-      <button class="notes-gen-btn" id="notes-gen-btn" onclick="generateNotes()" disabled>
+      <button class="notes-gen-btn" id="notes-gen-btn" onclick="generateNotes()">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-        Generate Notes — add files above
+        Generate Enhanced Notes (Sonnet)
       </button>
 
       <div class="notes-output" id="notes-output">
@@ -723,7 +637,9 @@ Works with any text — lecture notes, PDF content, chapter summaries. Minimum 3
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
             Save to account
           </button>
-          <button class="btn-use-notes" onclick="useNotesForQuiz()">📝 Use for quiz →</button>
+          <button class="btn-use-notes" onclick="useNotesForQuiz()">
+            📝 Use for quiz →
+          </button>
           <div style="position:relative;display:inline-block" id="dl-dropdown-wrap">
             <button class="btn-dl-notes" onclick="toggleDlDropdown()" id="dl-dropdown-btn">⬇ Download ▾</button>
             <div id="dl-dropdown" style="display:none;position:absolute;right:0;top:100%;margin-top:4px;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(15,23,42,.12);z-index:20;min-width:140px;overflow:hidden">
@@ -817,9 +733,6 @@ Works with any text — lecture notes, PDF content, chapter summaries. Minimum 3
     <div class="results-actions" id="results-actions">
       <button class="btn-restart" onclick="retry()">Retry same paper</button>
       <button class="btn-new" onclick="newExam()">New transcript</button>
-      <button class="btn-new" id="fresh-btn" onclick="getFreshQuestions()" style="border-color:var(--cyan);color:var(--cyan)">
-        🔄 Fresh questions (Groq)
-      </button>
       <button class="btn-download" id="dl-btn" onclick="downloadPDF()">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Download this section
@@ -1392,21 +1305,7 @@ async function startGeneration(overrideText) {
   }, 2200);
 
   try {
-    // Multi-section: preload ALL questions upfront in 2 parallel calls
-    if (parts.length > 1 && activePart === -1) {
-      document.getElementById('load-title').textContent = 'Loading all sections upfront…';
-      await preloadAllSections(count, types);
-      activePart = 0;
-      currentSectionTitle = (topicName || parts[0].title || 'Section') + '_1';
-    }
-
-    let qs;
-    if (preloadedSections[activePart] && preloadedSections[activePart].length) {
-      qs = preloadedSections[activePart];
-    } else {
-      // Single section or fallback — 2 parallel calls
-      qs = await callGroq(content, count, types);
-    }
+    const qs = await callGroq(content, count, types);
     clearInterval(stepInt);
     if (!qs || !qs.length) throw new Error('No questions returned');
 
@@ -2169,9 +2068,9 @@ document.getElementById('content').addEventListener('input', () => {
 });
 
 // ── Notes tab ──────────────────────────────────────────
-let notesText = '';
-let uploadedFiles = []; // [{name, text, type}]  type: 'masai'|'transcript'|'other'
-let visionEnabled = false;
+let notesText = ''; // current generated notes raw markdown
+let masaiFileText = '';
+let transcriptFileText = '';
 
 function switchTab(tab) {
   ['quiz','notes','saved'].forEach(t => {
@@ -2181,344 +2080,416 @@ function switchTab(tab) {
   if (tab === 'saved') loadSavedNotes();
 }
 
-// ── Vision toggle ─────────────────────────────────────
-function toggleVision() {
-  visionEnabled = !visionEnabled;
-  document.getElementById('vtoggle-track').classList.toggle('on', visionEnabled);
-}
+let masaiPageImages = []; // base64 images from Masai PDF pages
 
-// ── Multi-file drop zone ──────────────────────────────
-function handleMultiDragOver(e) {
-  e.preventDefault();
-  document.getElementById('multi-drop-zone').classList.add('drag-over');
-}
-function handleMultiDragLeave(e) {
-  document.getElementById('multi-drop-zone').classList.remove('drag-over');
-}
-function handleMultiDrop(e) {
-  e.preventDefault();
-  document.getElementById('multi-drop-zone').classList.remove('drag-over');
-  const files = Array.from(e.dataTransfer.files);
-  processMultipleFiles(files);
-}
-function handleMultiFileSelect(e) {
-  const files = Array.from(e.target.files);
-  processMultipleFiles(files);
-  e.target.value = ''; // reset so same file can be re-added
-}
-
-async function processMultipleFiles(files) {
-  const MAX = 5;
-  const remaining = MAX - uploadedFiles.length;
-  if (remaining <= 0) { toast(`Max ${MAX} files reached`); return; }
-  const toProcess = files.slice(0, remaining);
-  if (files.length > remaining) toast(`Only adding ${remaining} more file(s) — max 5 total`);
-
-  for (const file of toProcess) {
-    const ext = file.name.split('.').pop().toLowerCase();
-    if (!['pdf','txt','docx','doc'].includes(ext)) {
-      toast(`Skipped ${file.name} — unsupported format`);
-      continue;
-    }
-    try {
-      const text = await extractTextFromFile(file);
-      if (!text || text.trim().length < 50) {
-        toast(`⚠ Could not extract text from ${file.name} — try TXT format`);
-        // Show a failed chip so user knows
-        const chipsEl = document.getElementById('file-chips');
-        chipsEl.innerHTML += `<span class="file-chip" style="border-color:var(--red-b);background:var(--red-l)">
-          <span class="chip-type" style="background:var(--red-l);color:var(--red)">FAILED</span>
-          ${esc(file.name.length > 28 ? file.name.slice(0,25)+'…' : file.name)}
-          <span style="color:var(--text3);font-size:11px">extraction failed</span>
-        </span>`;
-        document.getElementById('uploaded-files-list').style.display = 'block';
-        continue;
-      }
-      // Auto-detect type from filename
-      const nameLow = file.name.toLowerCase();
-      const type = nameLow.includes('pre') || nameLow.includes('material') || nameLow.includes('note') || nameLow.includes('masai')
-        ? 'masai'
-        : nameLow.includes('transcript') || nameLow.includes('lecture') || nameLow.includes('session')
-        ? 'transcript'
-        : uploadedFiles.length === 0 ? 'masai' : 'transcript';
-      uploadedFiles.push({ name: file.name, text: text.trim(), type });
-    } catch(err) {
-      toast(`Error reading ${file.name}: ${err.message}`);
-    }
-  }
-  renderFileChips();
-}
-
-async function extractTextFromFile(file) {
-  const ext = file.name.split('.').pop().toLowerCase();
-  if (ext === 'txt') return await file.text();
-  if (ext === 'pdf') {
-    const pdfjsLib = window['pdfjs-dist/build/pdf'];
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-    const buf = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
-    const pages = [];
-    for (let i = 1; i <= Math.min(pdf.numPages, 40); i++) {
-      const page = await pdf.getPage(i);
-      const tc = await page.getTextContent();
-      let out = '', lastY = null;
-      for (const it of tc.items) {
-        const y = it.transform ? it.transform[5] : null;
-        if (lastY !== null && y !== null && Math.abs(y - lastY) > 2) out += '\n';
-        out += it.str + ' ';
-        if (y !== null) lastY = y;
-      }
-      pages.push(out);
-    }
-    return pages.join('\n');
-  }
-  if (ext === 'docx' || ext === 'doc') {
-    const buf = await file.arrayBuffer();
-    const result = await mammoth.extractRawText({ arrayBuffer: buf });
-    return result.value;
-  }
-  return '';
-}
-
-// Vision: extract diagram pages from a PDF file (only when visionEnabled)
-async function extractDiagramPages(file) {
-  if (!visionEnabled) return [];
-  const ext = file.name.split('.').pop().toLowerCase();
-  if (ext !== 'pdf') return [];
+async function handleNotesFile(e, which) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const statusEl = document.getElementById(`${which}-status`);
+  const boxEl = document.getElementById(`${which}-upload-box`);
+  statusEl.textContent = 'Reading…';
   try {
-    const pdfjsLib = window['pdfjs-dist/build/pdf'];
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-    const buf = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
-    const images = [];
-    for (let i = 1; i <= Math.min(pdf.numPages, 20) && images.length < 6; i++) {
-      const page = await pdf.getPage(i);
-      const viewport = page.getViewport({ scale: 1.2 });
-      const canvas = document.createElement('canvas');
-      canvas.width = viewport.width; canvas.height = viewport.height;
-      const ctx = canvas.getContext('2d');
-      await page.render({ canvasContext: ctx, viewport }).promise;
-      if (pageHasDiagram(canvas)) {
-        images.push({ data: canvas.toDataURL('image/jpeg', 0.75).split(',')[1], mediaType: 'image/jpeg', page: i });
+    let text = '';
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (ext === 'txt') {
+      text = await file.text();
+    } else if (ext === 'pdf') {
+      const pdfjsLib = window['pdfjs-dist/build/pdf'];
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      const buf = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+      const pages = [];
+      const images = [];
+      const maxPages = Math.min(pdf.numPages, 20);
+      for (let i = 1; i <= maxPages; i++) {
+        const page = await pdf.getPage(i);
+        // Extract text
+        const tc = await page.getTextContent();
+        let out = '', lastY = null;
+        for (const it of tc.items) {
+          const y = it.transform ? it.transform[5] : null;
+          if (lastY !== null && y !== null && Math.abs(y - lastY) > 2) out += '\n';
+          out += it.str + ' ';
+          if (y !== null) lastY = y;
+        }
+        pages.push(out);
+        // Render page as image (for vision — Masai PDF only)
+        if (which === 'masai' && images.length < 8) {
+          try {
+            const viewport = page.getViewport({ scale: 1.2 });
+            const canvas = document.createElement('canvas');
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            const ctx = canvas.getContext('2d');
+            await page.render({ canvasContext: ctx, viewport }).promise;
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
+            const base64 = dataUrl.split(',')[1];
+            images.push({ data: base64, mediaType: 'image/jpeg', page: i });
+          } catch(imgErr) { /* skip page render errors */ }
+        }
       }
+      text = pages.join('\n');
+      if (which === 'masai') masaiPageImages = images;
+    } else if (ext === 'docx' || ext === 'doc') {
+      const buf = await file.arrayBuffer();
+      const result = await mammoth.extractRawText({ arrayBuffer: buf });
+      text = result.value;
     }
-    return images;
-  } catch(e) { return []; }
-}
-
-function pageHasDiagram(canvas) {
-  const ctx = canvas.getContext('2d');
-  const w = canvas.width, h = canvas.height;
-  const sx = Math.floor(w/2 - 100), sy = Math.floor(h/2 - 100);
-  const data = ctx.getImageData(Math.max(0,sx), Math.max(0,sy), 200, 200).data;
-  let colourPixels = 0;
-  for (let i = 0; i < data.length; i += 4) {
-    const r = data[i], g = data[i+1], b = data[i+2];
-    if (!(r>230&&g>230&&b>230) && !(r<40&&g<40&&b<40)) colourPixels++;
+    if (!text || text.trim().length < 50) {
+      statusEl.textContent = 'Could not extract text — try TXT format';
+      return;
+    }
+    if (which === 'masai') masaiFileText = text.trim();
+    else transcriptFileText = text.trim();
+    const words = text.trim().split(/\s+/).length;
+    const imgNote = (which === 'masai' && masaiPageImages.length > 0) ? ` · ${masaiPageImages.length} pages with vision` : '';
+    statusEl.textContent = `✓ ${file.name} (${words.toLocaleString()} words${imgNote})`;
+    boxEl.classList.add('has-file');
+  } catch(err) {
+    statusEl.textContent = 'Error: ' + err.message;
   }
-  return colourPixels > (200*200*0.03);
-}
-
-function renderFileChips() {
-  const listEl = document.getElementById('uploaded-files-list');
-  const chipsEl = document.getElementById('file-chips');
-  const dzEl = document.getElementById('multi-drop-zone');
-  const btn = document.getElementById('notes-gen-btn');
-  const vRow = document.getElementById('vision-toggle-row');
-
-  if (!uploadedFiles.length) {
-    listEl.style.display = 'none';
-    dzEl.classList.remove('has-files');
-    vRow.style.display = 'none';
-    btn.disabled = true;
-    btn.lastChild.textContent = ' Generate Notes — add files above';
-    return;
-  }
-
-  listEl.style.display = 'block';
-  dzEl.classList.add('has-files');
-  vRow.style.display = 'block';
-  btn.disabled = false;
-  const pasteWords = (document.getElementById('notes-paste-text')?.value.trim().split(/\s+/).length) || 0;
-  const pasteNote = pasteWords > 30 ? ' + pasted text' : '';
-  btn.lastChild.textContent = ` Generate Notes from ${uploadedFiles.length} file${uploadedFiles.length>1?'s':''}${pasteNote}`;
-
-  const countBadge = document.getElementById('file-count-badge');
-  if (countBadge) countBadge.textContent = `(${uploadedFiles.length}/5${uploadedFiles.length < 5 ? ' — click "+ Add more" to add' : ''})`;
-
-  const typeLabels = { masai:'Masai', transcript:'Transcript', other:'Other' };
-  chipsEl.innerHTML = uploadedFiles.map((f, i) => {
-    const words = f.text.split(/\s+/).length;
-    return `<span class="file-chip">
-      <span class="chip-type chip-${f.type}">${typeLabels[f.type]}</span>
-      ${esc(f.name.length > 28 ? f.name.slice(0,25)+'…' : f.name)}
-      <span style="color:var(--text3);font-size:11px">${words.toLocaleString()}w</span>
-      <span class="chip-remove" onclick="removeFile(${i})" title="Remove">×</span>
-    </span>`;
-  }).join('');
-}
-
-function removeFile(idx) {
-  uploadedFiles.splice(idx, 1);
-  renderFileChips();
-}
-
-function clearAllFiles() {
-  uploadedFiles = [];
-  renderFileChips();
-  document.getElementById('multi-drop-zone').classList.remove('has-files');
-}
-
-function renderMarkdown(md) {
-  return (md || '')
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(/^## (.+)$/gm,'<h2 style="font-size:15px;font-weight:700;color:var(--text);margin:18px 0 6px;padding-bottom:4px;border-bottom:1px solid var(--border)">$1</h2>')
-    .replace(/^### (.+)$/gm,'<h3 style="font-size:13.5px;font-weight:600;color:var(--indigo);margin:12px 0 4px">$1</h3>')
-    .replace(/^# (.+)$/gm,'<h2 style="font-size:16px;font-weight:700;color:var(--text);margin:18px 0 6px">$1</h2>')
-    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
-    .replace(/^> \*\*Exam angle:\*\*\s*(.+)$/gm,'<blockquote style="border-left:3px solid var(--indigo);padding:8px 12px;background:var(--indigo-l);border-radius:0 8px 8px 0;margin:10px 0;font-size:12.5px"><strong>Exam angle:</strong> $1</blockquote>')
-    .replace(/^> (.+)$/gm,'<blockquote style="border-left:3px solid var(--indigo);padding:8px 12px;background:var(--indigo-l);border-radius:0 8px 8px 0;margin:10px 0;font-size:12.5px">$1</blockquote>')
-    .replace(/^---$/gm,'<hr style="border:none;border-top:1px solid var(--border);margin:16px 0">')
-    .replace(/^[-*] (.+)$/gm,'<li style="margin-bottom:3px">$1</li>')
-    .replace(/(<li[^>]*>[\s\S]*?<\/li>\n?)+/g,s=>`<ul style="padding-left:20px;margin:6px 0">${s}</ul>`)
-    .replace(/\n{2,}/g,'<br><br>')
-    .replace(/\n/g,'<br>');
-}
-
-
-  const val = document.getElementById('notes-paste-text').value.trim();
-  const words = val ? val.split(/\s+/).length : 0;
-  const statusEl = document.getElementById('paste-text-status');
-  const btn = document.getElementById('notes-gen-btn');
-
-  if (val.length > 0) {
-    statusEl.style.display = 'block';
-    statusEl.textContent = words < 30
-      ? `⚠ Only ${words} words — paste more content for good notes`
-      : `✓ ${words.toLocaleString()} words ready to merge`;
-    statusEl.style.color = words < 30 ? 'var(--amber)' : 'var(--green)';
-  } else {
-    statusEl.style.display = 'none';
-  }
-
-  // Enable generate button if paste has content even without files
-  if (val.length > 50) {
-    btn.disabled = false;
-    const fileCount = uploadedFiles.length;
-    btn.lastChild.textContent = fileCount > 0
-      ? ` Generate Notes from ${fileCount} file${fileCount>1?'s':''} + pasted text`
-      : ` Generate Notes from pasted text`;
-  } else if (!uploadedFiles.length) {
-    btn.disabled = true;
-    btn.lastChild.textContent = ' Generate Notes — add files above';
-  }
-}
-
-
-let notesModel = 'claude';
-
-function selectNotesModel(model) {
-  notesModel = model;
-  document.getElementById('model-claude-btn').className = 'model-btn' + (model === 'claude' ? ' active-claude' : '');
-  document.getElementById('model-groq-btn').className = 'model-btn' + (model === 'groq' ? ' active-groq' : '');
 }
 
 async function generateNotes() {
-  const pasteText = document.getElementById('notes-paste-text').value.trim();
-  if (!uploadedFiles.length && !pasteText) {
-    document.getElementById('notes-err').innerHTML = '<div class="err-box">Add at least one file or paste some text above.</div>';
+  if (!masaiFileText && !transcriptFileText) {
+    document.getElementById('notes-err').innerHTML = '<div class="err-box">Upload at least one file — Masai PDF or transcript.</div>';
     return;
   }
   document.getElementById('notes-err').innerHTML = '';
   const btn = document.getElementById('notes-gen-btn');
   btn.disabled = true;
-  btn.innerHTML = '<div class="spin-ring" style="width:20px;height:20px;border-width:2.5px;margin:0"></div> Reading files & generating…';
+  btn.innerHTML = '<div class="spin-ring" style="width:20px;height:20px;border-width:2.5px;margin:0"></div> Generating with Sonnet…';
 
   const topic = document.getElementById('notes-topic').value.trim() || 'PM Module';
-
   try {
-    // Build source blocks — label each file by type and order
-    const masaiFiles = uploadedFiles.filter(f => f.type === 'masai');
-    const transcriptFiles = uploadedFiles.filter(f => f.type === 'transcript');
-    const otherFiles = uploadedFiles.filter(f => f.type === 'other');
-
-    let combinedSources = [];
-    masaiFiles.forEach((f, i) => combinedSources.push({
-      label: masaiFiles.length > 1 ? `MASAI MATERIAL ${i+1}` : 'MASAI OFFICIAL MATERIAL',
-      text: f.text
-    }));
-    transcriptFiles.forEach((f, i) => combinedSources.push({
-      label: transcriptFiles.length > 1 ? `LECTURE TRANSCRIPT ${i+1}` : 'LECTURE TRANSCRIPT',
-      text: f.text
-    }));
-    otherFiles.forEach((f, i) => combinedSources.push({
-      label: `ADDITIONAL MATERIAL ${i+1}`,
-      text: f.text
-    }));
-    // Add pasted text as pre-read material (most common use case for Masai LMS)
-    if (pasteText && pasteText.length > 50) {
-      combinedSources.unshift({
-        label: 'LMS PRE-READ (pasted)',
-        text: pasteText
-      });
-    }
-
-    // Vision: only from masai-type PDFs, only when enabled
-    let diagramImages = [];
-    // (vision extraction skipped here — handled separately if needed)
-
     const res = await fetch('/api/notes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        sources: combinedSources,
+        masaiText: masaiFileText,
+        transcriptText: transcriptFileText,
         topicTitle: topic,
-        masaiImages: diagramImages,
-        useGroq: notesModel === 'groq'
+        masaiImages: masaiPageImages   // vision: rendered PDF pages
       })
     });
-
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.error || `API error ${res.status}`);
     }
-
-    const contentType = res.headers.get('content-type') || '';
-    if (contentType.includes('text/plain')) {
-      // True streaming — show notes as they arrive
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      const bodyEl = document.getElementById('notes-body');
-      document.getElementById('notes-output-title').textContent = topic;
-      document.getElementById('notes-output').classList.add('show');
-      bodyEl.innerHTML = '<em style="color:var(--text3)">Generating — notes will appear here as they stream in...</em>';
-      notesText = '';
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        notesText += decoder.decode(value, { stream: true });
-        bodyEl.innerHTML = renderMarkdown(notesText);
-        bodyEl.scrollTop = bodyEl.scrollHeight;
-      }
-    } else {
-      const data = await res.json();
-      notesText = data.notes || '';
-      if (!notesText) throw new Error('No notes returned');
-      document.getElementById('notes-output-title').textContent = topic;
-      document.getElementById('notes-body').innerHTML = renderMarkdown(notesText);
-      document.getElementById('notes-output').classList.add('show');
-    }
-
+    const data = await res.json();
+    notesText = data.notes || '';
     if (!notesText) throw new Error('No notes returned');
+
+    document.getElementById('notes-output-title').textContent = topic;
+    document.getElementById('notes-body').innerHTML = renderMarkdown(notesText);
+    document.getElementById('notes-output').classList.add('show');
     document.getElementById('btn-save-notes').disabled = false;
     toast('✓ Notes generated');
   } catch(err) {
     document.getElementById('notes-err').innerHTML = `<div class="err-box">Notes generation failed: ${err.message}</div>`;
   }
   btn.disabled = false;
-  btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg> Generate Notes';
+  btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg> Generate Enhanced Notes (Sonnet)';
 }
 
+function renderMarkdown(md) {
+  // Simple markdown renderer for notes display
+  return md
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/^#{2}\s+(.+)$/gm, '<h2>$1</h2>')
+    .replace(/^#{3}\s+(.+)$/gm, '<h3>$1</h3>')
+    .replace(/^#{1}\s+(.+)$/gm, '<h2>$1</h2>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/^>\s+\*\*Exam angle:\*\*\s*([\s\S]*?)(?=\n\n|\n---|\n##|$)/gm, (_,t) => `<blockquote><strong>Exam angle:</strong> ${t.trim()}</blockquote>`)
+    .replace(/^>\s+(.+)$/gm, '<blockquote>$1</blockquote>')
+    .replace(/^---$/gm, '<hr>')
+    .replace(/^[-*]\s+(.+)$/gm, '<li>$1</li>')
+    .replace(/(<li>.*<\/li>\n?)+/g, s => `<ul>${s}</ul>`)
+    .replace(/\n{2,}/g, '<br><br>')
+    .replace(/\n/g, '<br>');
+}
+
+function useNotesForQuiz() {
+  if (!notesText) return;
+  document.getElementById('content').value = notesText;
+  rebuildParts();
+  switchTab('quiz');
+  toast('✓ Notes loaded into quiz generator');
+}
+
+function downloadNotesTxt() {
+  if (!notesText) return;
+  const topic = document.getElementById('notes-topic').value.trim() || 'Notes';
+  const slug = topic.replace(/[^a-zA-Z0-9]+/g,'-').slice(0,40);
+  const blob = new Blob([notesText], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `AceMock_Notes_${slug}.txt`;
+  a.click();
+}
+
+async function saveNotesToSupabase() {
+  if (!notesText) return;
+  if (!sb) { toast('Supabase not configured'); return; }
+  if (!currentUser) { toast('Log in to save notes'); switchTab('quiz'); show('s-auth'); return; }
+  const btn = document.getElementById('btn-save-notes');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  const topic = document.getElementById('notes-topic').value.trim() || 'Untitled';
+  try {
+    const { error } = await sb.from('acemock_notes').insert({
+      user_id: currentUser.id,
+      topic_title: topic,
+      notes_text: notesText,
+      created_at: new Date().toISOString()
+    });
+    if (error) throw error;
+    toast('✓ Notes saved to your account');
+    btn.textContent = '✓ Saved';
+  } catch(err) {
+    toast('Save failed: ' + (err.message || 'Supabase error'));
+    btn.disabled = false;
+    btn.textContent = 'Save to account';
+  }
+}
+
+async function loadSavedNotes() {
+  const listEl = document.getElementById('saved-notes-list');
+  if (!sb || !currentUser) {
+    listEl.innerHTML = '<div class="hist-empty">Log in to see your saved notes.</div>';
+    return;
+  }
+  listEl.innerHTML = '<div class="hist-empty">Loading…</div>';
+  try {
+    // Fetch notes
+    const { data: notes, error: ne } = await sb.from('acemock_notes')
+      .select('id, topic_title, notes_text, created_at')
+      .eq('user_id', currentUser.id)
+      .order('created_at', { ascending: false })
+      .limit(50);
+    if (ne) throw ne;
+
+    // Fetch all quiz attempts to match against note topics
+    const { data: attempts } = await sb.from('acemock_attempts')
+      .select('id, section_title, score, max_score, pct, created_at, time_taken')
+      .eq('user_id', currentUser.id)
+      .order('created_at', { ascending: false })
+      .limit(500);
+
+    if (!notes || !notes.length) {
+      listEl.innerHTML = '<div class="hist-empty">No saved notes yet. Generate notes and click "Save to account".</div>';
+      return;
+    }
+    // Populate cache for ID-based access
+    savedNotesCache = {};
+    notes.forEach(n => { savedNotesCache[n.id] = n; });
+
+    listEl.innerHTML = notes.map(n => {
+      const d = new Date(n.created_at);
+      const when = d.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+      const preview = (n.notes_text || '').slice(0, 120).replace(/[#*>\n]/g,' ').trim() + '…';
+      const words = (n.notes_text||'').split(/\s+/).length;
+
+      // Match quiz attempts to this note by topic title
+      const noteBase = n.topic_title.toLowerCase().replace(/\s+/g,'-').slice(0,30);
+      const linked = (attempts||[]).filter(a => {
+        const st = (a.section_title||'').toLowerCase();
+        return st.includes(n.topic_title.toLowerCase().slice(0,15)) ||
+               n.topic_title.toLowerCase().includes(st.replace(/_\d+$/,'').slice(0,15));
+      });
+
+      const best = linked.length ? Math.max(...linked.map(a=>a.pct)) : null;
+      const bestCls = best===null ? '' : best>=85 ? 'hp-good' : best>=60 ? 'hp-mid' : 'hp-low';
+
+      // Build attempt mini-history rows
+      const attemptsHtml = linked.length ? `
+        <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+          <div style="font-size:10.5px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Quiz attempts from this topic</div>
+          ${linked.slice(0,5).map(a => {
+            const ad = new Date(a.created_at);
+            const awhen = ad.toLocaleDateString('en-IN',{day:'numeric',month:'short'});
+            const mins = Math.floor((a.time_taken||0)/60);
+            const cls = a.pct>=85?'hp-good':a.pct>=60?'hp-mid':'hp-low';
+            const label = a.section_title || 'Quiz';
+            return `<div style="display:flex;align-items:center;gap:10px;padding:5px 0;font-size:12px;color:var(--text2)">
+              <span class="hist-pct ${cls}" style="width:40px;height:40px;font-size:13px">${a.pct}%<span style="font-size:8px">${a.score}/${a.max_score}</span></span>
+              <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(label)}</span>
+              <span style="font-size:11px;color:var(--text3)">${awhen} · ${mins}m</span>
+            </div>`;
+          }).join('')}
+          ${linked.length > 5 ? `<div style="font-size:11px;color:var(--text3);margin-top:4px">+${linked.length-5} more attempts</div>` : ''}
+        </div>` : '';
+
+      const bestBadge = best !== null
+        ? `<span class="hist-pct ${bestCls}" style="width:44px;height:44px;font-size:13px;flex-shrink:0">${best}%<span style="font-size:8px">best</span></span>`
+        : `<span style="width:44px;height:44px;flex-shrink:0;border:1.5px dashed var(--border);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--text3)">No quiz</span>`;
+
+      return `<div class="saved-note-card" id="snc-${n.id}" style="flex-direction:column;align-items:stretch">
+        <div style="display:flex;align-items:flex-start;gap:12px">
+          ${bestBadge}
+          <div style="flex:1;min-width:0">
+            <div class="snc-title">${esc(n.topic_title)}</div>
+            <div class="snc-meta">${when} · ${words.toLocaleString()} words · ${linked.length} quiz attempt${linked.length===1?'':'s'}</div>
+            <div style="font-size:11.5px;color:var(--text3);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(preview)}</div>
+          </div>
+          <div class="snc-actions" style="flex-shrink:0">
+            <button class="snc-btn" onclick="loadSavedNoteById('${n.id}')">Read</button>
+            <button class="snc-btn" onclick="feedNoteToQuizById('${n.id}')">→ Quiz</button>
+            <button class="snc-btn danger" onclick="deleteSavedNote('${n.id}')">Delete</button>
+          </div>
+        </div>
+        ${attemptsHtml}
+      </div>`;
+    }).join('');
+  } catch(err) {
+    listEl.innerHTML = `<div class="hist-empty">Could not load notes: ${esc(err.message||'error')}</div>`;
+  }
+}
+
+// note cache for ID-based access
+let savedNotesCache = {};
+
+function loadSavedNoteById(id) {
+  if (!savedNotesCache[id]) { toast('Note not loaded yet — refresh saved notes'); return; }
+  const n = savedNotesCache[id];
+  notesText = n.notes_text;
+  document.getElementById('notes-topic').value = n.topic_title;
+  document.getElementById('notes-output-title').textContent = n.topic_title;
+  document.getElementById('notes-body').innerHTML = renderMarkdown(n.notes_text);
+  document.getElementById('notes-output').classList.add('show');
+  switchTab('notes');
+}
+
+function feedNoteToQuizById(id) {
+  if (!savedNotesCache[id]) { toast('Note not loaded — refresh saved notes'); return; }
+  document.getElementById('content').value = savedNotesCache[id].notes_text;
+  rebuildParts();
+  switchTab('quiz');
+  toast('✓ Saved notes loaded into quiz generator');
+}
+
+function loadSavedNote(id, title, text) {
+  notesText = text;
+  document.getElementById('notes-topic').value = title;
+  document.getElementById('notes-output-title').textContent = title;
+  document.getElementById('notes-body').innerHTML = renderMarkdown(text);
+  document.getElementById('notes-output').classList.add('show');
+  switchTab('notes');
+}
+
+function feedNoteToQuiz(text) {
+  document.getElementById('content').value = text;
+  rebuildParts();
+  switchTab('quiz');
+  toast('✓ Saved notes loaded into quiz generator');
+}
+
+// ── Download dropdown ─────────────────────────────────
+function toggleDlDropdown() {
+  const dd = document.getElementById('dl-dropdown');
+  dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+}
+document.addEventListener('click', (e) => {
+  if (!document.getElementById('dl-dropdown-wrap')?.contains(e.target)) {
+    const dd = document.getElementById('dl-dropdown');
+    if (dd) dd.style.display = 'none';
+  }
+});
+
+async function downloadNotes(format) {
+  document.getElementById('dl-dropdown').style.display = 'none';
+  if (!notesText) return;
+  const topic = document.getElementById('notes-topic').value.trim() || 'Notes';
+  const slug = topic.replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40) || 'Notes';
+  const stamp = new Date().toISOString().slice(0,10);
+
+  if (format === 'txt') {
+    const blob = new Blob([notesText], { type: 'text/plain' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = `AceMock_Notes_${slug}_${stamp}.txt`; a.click();
+
+  } else if (format === 'doc') {
+    // Simple RTF-based .doc that opens in Word/Google Docs
+    const rtf = `{\\rtf1\\ansi\\deff0
+{\\fonttbl{\\f0 Arial;}}
+{\\colortbl;\\red79\\green70\\blue229;}
+\\f0\\fs24
+{\\b\\fs32 ${topic.replace(/[{}\\]/g,'')}\\par}
+\\fs22\\par
+${notesText
+  .replace(/[{}\\]/g, m => '\\'+m)
+  .replace(/^## (.+)$/gm, (_,t)=>`\\par{\\b\\cf1\\fs26 ${t}}\\par`)
+  .replace(/^### (.+)$/gm, (_,t)=>`\\par{\\b\\fs24 ${t}}\\par`)
+  .replace(/^> \*\*Exam angle:\*\* (.+)$/gm, (_,t)=>`\\par{\\highlight3\\b Exam angle:} ${t}\\par`)
+  .replace(/\*\*(.+?)\*\*/g, (_,t)=>`{\\b ${t}}`)
+  .replace(/^---$/gm,'\\par\\line\\par')
+  .replace(/^[-*] (.+)$/gm, (_,t)=>`\\par • ${t}`)
+  .replace(/\n/g,'\\par\n')
+}}`;
+    const blob = new Blob([rtf], { type: 'application/msword' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = `AceMock_Notes_${slug}_${stamp}.doc`; a.click();
+
+  } else if (format === 'pdf') {
+    const btn = document.getElementById('dl-dropdown-btn');
+    btn.textContent = '⏳ Preparing PDF…'; btn.disabled = true;
+    try {
+      // Build styled HTML for pdf conversion
+      const htmlContent = `<!DOCTYPE html><html><head><meta charset="utf-8">
+      <style>
+        body{font-family:Arial,sans-serif;padding:32px 40px;color:#0f172a;max-width:740px;margin:0 auto;font-size:13px;line-height:1.75}
+        h1{font-size:22px;color:#0f172a;margin:0 0 4px}
+        h2{font-size:16px;color:#0f172a;margin:24px 0 6px;padding-bottom:4px;border-bottom:1.5px solid #e2e8f0}
+        h3{font-size:13.5px;color:#4f46e5;margin:14px 0 4px}
+        blockquote{border-left:3px solid #4f46e5;padding:8px 14px;background:#eef2ff;border-radius:0 8px 8px 0;margin:10px 0;font-size:12px}
+        blockquote strong{color:#4f46e5}
+        strong{font-weight:700}
+        ul{padding-left:20px;margin:6px 0}
+        li{margin-bottom:3px}
+        hr{border:none;border-top:1px solid #e2e8f0;margin:18px 0}
+        table{width:100%;border-collapse:collapse;margin:10px 0;font-size:12px}
+        th{background:#f1f5f9;padding:7px 10px;text-align:left;font-weight:600;border:1px solid #e2e8f0}
+        td{padding:6px 10px;border:1px solid #e2e8f0}
+        tr:nth-child(even) td{background:#f8fafc}
+        .cover{margin-bottom:28px;padding-bottom:16px;border-bottom:2px solid #4f46e5}
+        .cover-sub{color:#64748b;font-size:12px;margin-top:4px}
+      </style></head><body>
+      <div class="cover">
+        <h1>${esc(topic)}</h1>
+        <div class="cover-sub">AceMock Study Notes · Generated ${new Date().toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'})}</div>
+      </div>
+      ${renderMarkdownForPDF(notesText)}
+      </body></html>`;
+      await html2pdf().set({
+        margin:[12,14,14,14],
+        filename:`AceMock_Notes_${slug}_${stamp}.pdf`,
+        image:{type:'jpeg',quality:0.98},
+        html2canvas:{scale:2,backgroundColor:'#ffffff'},
+        jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},
+        pagebreak:{mode:['css','legacy']}
+      }).from(htmlContent).save();
+    } catch(e) { alert('PDF failed: '+(e.message||'error')); }
+    btn.textContent = '⬇ Download ▾'; btn.disabled = false;
+  }
+}
+
+function renderMarkdownForPDF(md) {
+  return md
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/^#{2}\s+(.+)$/gm,'<h2>$1</h2>')
+    .replace(/^#{3}\s+(.+)$/gm,'<h3>$1</h3>')
+    .replace(/^#{1}\s+(.+)$/gm,'<h2>$1</h2>')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/^>\s+\*\*Exam angle:\*\*\s*(.+)$/gm,'<blockquote><strong>Exam angle:</strong> $1</blockquote>')
+    .replace(/^>\s+(.+)$/gm,'<blockquote>$1</blockquote>')
+    .replace(/^---$/gm,'<hr>')
+    .replace(/^[-*]\s+(.+)$/gm,'<li>$1</li>')
+    .replace(/(<li>[\s\S]*?<\/li>)/g,'<ul>$1</ul>')
+    .replace(/\n{2,}/g,'<br><br>')
+    .replace(/\n/g,'<br>');
+}
+
+// ── Download legacy (kept for compatibility) ──────────
+function downloadNotesTxt() { downloadNotes('txt'); }
 
 async function deleteSavedNote(id) {
   if (!confirm('Delete this note? Cannot be undone.')) return;
@@ -2532,101 +2503,8 @@ async function deleteSavedNote(id) {
   }
 }
 
-// ── Credit tracker ───────────────────────────────────
-// Tracks estimated API spend locally in Supabase
-// Sonnet: input $3/M, output $15/M | Haiku: input $0.8/M, output $4/M
-const CREDIT_BUDGET = 5.00; // update when you top up
-const SONNET_IN = 3.00 / 1_000_000, SONNET_OUT = 15.00 / 1_000_000;
-const HAIKU_IN  = 0.80 / 1_000_000, HAIKU_OUT  =  4.00 / 1_000_000;
-const TOKENS_PER_CHAR = 0.25; // ~4 chars per token
-
-let totalSpent = 0;
-
-async function loadCreditHistory() {
-  if (!sb || !currentUser) return;
-  try {
-    const { data } = await sb.from('acemock_usage')
-      .select('cost')
-      .eq('user_id', currentUser.id);
-    if (data) totalSpent = data.reduce((s, r) => s + (r.cost || 0), 0);
-    renderCreditBar();
-  } catch(e) {}
-}
-
-function trackUsage(type, inputChars) {
-  // Estimate tokens and cost
-  const inputTokens  = Math.ceil(inputChars * TOKENS_PER_CHAR) + 500; // +500 for system prompt
-  const outputTokens = 4096;
-  let cost = 0;
-  if (type === 'notes') {
-    cost = (inputTokens * SONNET_IN) + (outputTokens * SONNET_OUT);
-  } else {
-    // quiz = 2 Haiku calls
-    cost = 2 * ((inputTokens * HAIKU_IN) + (outputTokens * HAIKU_OUT));
-  }
-  totalSpent += cost;
-  renderCreditBar();
-  // Save to Supabase async (fire and forget)
-  if (sb && currentUser) {
-    sb.from('acemock_usage').insert({
-      user_id: currentUser.id,
-      type,
-      cost,
-      created_at: new Date().toISOString()
-    }).then(() => {}).catch(() => {});
-  }
-}
-
-function renderCreditBar() {
-  const bar = document.getElementById('credit-bar');
-  const fill = document.getElementById('credit-fill');
-  const label = document.getElementById('credit-label');
-  if (!bar || !currentUser) return;
-  bar.style.display = 'flex';
-  const remaining = Math.max(0, CREDIT_BUDGET - totalSpent);
-  const pct = (remaining / CREDIT_BUDGET) * 100;
-  fill.style.width = pct + '%';
-  fill.style.background = pct > 40 ? 'var(--green)' : pct > 15 ? 'var(--amber)' : 'var(--red)';
-  label.textContent = `$${remaining.toFixed(2)} left`;
-  bar.className = 'credit-bar' + (pct <= 15 ? ' danger' : pct <= 40 ? ' warn' : '');
-}
-
-// Track notes generation usage
-// usage tracked inside generateNotes directly
-
-// ── Fresh questions (Groq) ─────────────────────────────
-async function getFreshQuestions() {
-  if (!questions.length) return;
-  freshMode = true;
-  const btn = document.getElementById('fresh-btn');
-  btn.disabled = true; btn.textContent = '🔄 Getting fresh questions…';
-  try {
-    const content = document.getElementById('content').value.trim() || questions.map(q => q.question).join('\n');
-    const count = questions.length;
-    const types = [...new Set(questions.map(q => q.type))];
-    const qs = await callGroq(content, count, types);
-    if (!qs || !qs.length) throw new Error('No questions returned');
-    questions  = qs;
-    answers    = {};
-    cur        = 0;
-    renderedQId = null;
-    timerSec   = lastTimeMins * 60;
-    startMs    = Date.now();
-    renderQuizMap();
-    renderQuestion();
-    startTimer();
-    show('s-quiz');
-    toast('✓ Fresh questions from Groq (free)');
-  } catch(e) {
-    toast('Fresh questions failed: ' + (e.message || 'error'));
-  }
-  freshMode = false;
-  btn.disabled = false; btn.textContent = '🔄 Fresh questions (Groq)';
-}
-
 // Boot: decide between login screen and the app
 initAuth();
-setTimeout(() => loadCreditHistory(), 1500); // load after auth settles
 </script>
 </body>
 </html>
