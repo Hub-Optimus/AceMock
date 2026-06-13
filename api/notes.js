@@ -1,81 +1,54 @@
-export const config = { runtime: 'nodejs', maxDuration: 60 };
+export const config = { runtime: 'edge' };
 
-export default async function handler(req, res) {
+export default async function handler(req) {
   if (req.method === 'OPTIONS') {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'POST');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-    return res.status(200).end();
+    return new Response(null, {
+      status: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST',
+        'Access-Control-Allow-Headers': 'Content-Type',
+      },
+    });
   }
 
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 });
   }
 
   try {
-    const body = await new Promise((resolve, reject) => {
-      let raw = '';
-      req.on('data', chunk => raw += chunk);
-      req.on('end', () => { try { resolve(JSON.parse(raw)); } catch(e) { reject(e); } });
-    });
-    const { sources, topicTitle, masaiImages } = body;
+    const { sources, topicTitle } = await req.json();
 
     if (!sources || !sources.length) {
-      return res.status(400).json({ error: 'No source files provided' });
+      return new Response(JSON.stringify({ error: 'No source files provided' }), { status: 400 });
     }
 
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
-      return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured' });
+      return new Response(JSON.stringify({ error: 'ANTHROPIC_API_KEY not configured' }), { status: 500 });
     }
 
-    const systemPrompt = `You are an expert PM study notes creator for the BITSoM × Masai "Product Management with Generative & Agentic AI" program.
+    const systemPrompt = `You are an expert PM study notes creator for the BITSoM x Masai PM program.
 
-You will receive multiple source files on the same topic. Produce ONE unified set of enhanced study notes. Do not repeat the same concept multiple times. Merge intelligently.
-
-Source priority when content overlaps:
-- MASAI OFFICIAL MATERIAL / LMS PRE-READ → authoritative framework definitions
-- POST-LECTURE material → refinements and additional depth
-- LECTURE TRANSCRIPT → live examples, instructor nuances, real case studies
-
-For every concept use this format:
+Produce concise exam-ready notes. For every concept:
 
 ## [Concept Name]
-
-**What it is** — One clear sentence definition.
-
-**Why it's used** — The problem it solves.
-
-**Real-life examples** — 2-3 examples beyond the source material. Use Indian companies where relevant.
-
-**How it impacts PM decisions** — How a PM uses this day-to-day.
-
-**From the material** — The specific example/case study from the sources.
-
-> **Exam angle:** What type of question will this become? What trap do students fall into?
-
+**What it is** — One sentence.
+**Why it's used** — Problem it solves.
+**Real-life examples** — 2 Indian company examples.
+**How it impacts PM decisions** — Specific PM use.
+**From the material** — Exact case study from sources.
+> **Exam angle:** What trap do students fall into?
 ---
+Reproduce framework diagrams as ASCII. Output clean markdown only. Be concise — cover all concepts but keep each section tight.`;
 
-For framework diagrams (pyramid, funnel, matrix) reproduce as ASCII art.
-
-End with a QUICK REVISION TABLE of all frameworks covered. Output clean markdown only.`;
-
-    let textBlock = `Topic: ${topicTitle || 'PM Module'}\n\nYou have ${sources.length} source file(s) to merge:\n\n`;
+    let textBlock = `Topic: ${topicTitle || 'PM Module'}\n\n`;
     for (const src of sources) {
       textBlock += `=== ${src.label} ===\n${src.text}\n\n`;
     }
-    textBlock += `Produce ONE unified set of enhanced notes from all the above sources.`;
+    textBlock += `Produce ONE unified set of notes covering all concepts above.`;
 
-    const contentParts = [{ type: 'text', text: textBlock }];
-
-    if (masaiImages && masaiImages.length > 0) {
-      contentParts.push({ type: 'text', text: '\nDiagram pages from PDF (reproduce as ASCII in notes):' });
-      for (const img of masaiImages.slice(0, 6)) {
-        contentParts.push({ type: 'image', source: { type: 'base64', media_type: img.mediaType || 'image/jpeg', data: img.data } });
-      }
-    }
-
-    // ── STREAMING REQUEST ──────────────────────────────
+    // Call Anthropic with streaming — Edge runtime keeps connection alive
     const upstream = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -85,53 +58,75 @@ End with a QUICK REVISION TABLE of all frameworks covered. Output clean markdown
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
-        max_tokens: 4096,
+        max_tokens: 3000,
         stream: true,
         system: systemPrompt,
-        messages: [{ role: 'user', content: contentParts }],
+        messages: [{ role: 'user', content: textBlock }],
       }),
     });
 
     if (!upstream.ok) {
-      const errData = await upstream.json().catch(() => ({}));
-      return res.status(502).json({ error: errData.error?.message || `API error ${upstream.status}` });
+      const err = await upstream.json().catch(() => ({}));
+      return new Response(
+        JSON.stringify({ error: err.error?.message || `API error ${upstream.status}` }),
+        { status: 502, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }
+      );
     }
 
-    // Stream SSE from Anthropic → reassemble → send as single JSON response
-    // This keeps the frontend simple (no SSE parsing needed there)
-    // while preventing Vercel timeout (data flows continuously)
-    let fullText = '';
-    const reader = upstream.body.getReader();
-    const decoder = new TextDecoder();
+    // TRUE streaming: pipe Anthropic SSE → transform to plain text chunks → browser
+    // Edge runtime supports this natively — no timeout because data flows continuously
+    const encoder = new TextEncoder();
+    let buffer = '';
 
-    // Set headers for streaming-friendly response
-    res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Transfer-Encoding', 'chunked');
+    const stream = new ReadableStream({
+      async start(controller) {
+        const reader = upstream.body.getReader();
+        const decoder = new TextDecoder();
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      const chunk = decoder.decode(value, { stream: true });
-      const lines = chunk.split('\n');
-
-      for (const line of lines) {
-        if (!line.startsWith('data: ')) continue;
-        const data = line.slice(6).trim();
-        if (data === '[DONE]') continue;
         try {
-          const parsed = JSON.parse(data);
-          if (parsed.type === 'content_block_delta' && parsed.delta?.type === 'text_delta') {
-            fullText += parsed.delta.text;
-          }
-        } catch(e) { /* skip malformed chunks */ }
-      }
-    }
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
 
-    return res.status(200).json({ notes: fullText });
+            const chunk = decoder.decode(value, { stream: true });
+            const lines = chunk.split('\n');
+
+            for (const line of lines) {
+              if (!line.startsWith('data: ')) continue;
+              const data = line.slice(6).trim();
+              if (data === '[DONE]') continue;
+              try {
+                const parsed = JSON.parse(data);
+                if (parsed.type === 'content_block_delta' && parsed.delta?.type === 'text_delta') {
+                  buffer += parsed.delta.text;
+                  // Send each text chunk directly to browser as it arrives
+                  controller.enqueue(encoder.encode(parsed.delta.text));
+                }
+              } catch(e) { /* skip malformed */ }
+            }
+          }
+        } finally {
+          controller.close();
+        }
+      }
+    });
+
+    // Return streaming plain-text response
+    // Frontend accumulates chunks and shows notes when stream ends
+    return new Response(stream, {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Access-Control-Allow-Origin': '*',
+        'X-Content-Type-Options': 'nosniff',
+        'Cache-Control': 'no-cache',
+      },
+    });
 
   } catch (err) {
-    return res.status(500).json({ error: err.message || 'Unexpected error' });
+    return new Response(
+      JSON.stringify({ error: err.message || 'Unexpected error' }),
+      { status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }
+    );
   }
 }
