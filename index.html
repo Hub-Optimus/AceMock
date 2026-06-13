@@ -552,7 +552,11 @@ Works with any text — lecture notes, PDF content, chapter summaries. Minimum 3
       <button class="btn-new" onclick="newExam()">New transcript</button>
       <button class="btn-download" id="dl-btn" onclick="downloadPDF()">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Download PDF
+        Download this section
+      </button>
+      <button class="btn-download" id="dl-all-btn" onclick="downloadAllPDF()" style="display:none;background:#7c3aed">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download all sections
       </button>
     </div>
 
@@ -608,6 +612,7 @@ let lastTimeMins = 30;
 let activeTypes = new Set(['MCQ','MSQ','NAT']);
 let currentSectionTitle = '';
 let viewingHistory = false;
+let allSectionResults = {};
 
 // ── Supabase (attempt history) ───────────────────────
 // Paste your project values below. Get them from:
@@ -1144,7 +1149,7 @@ MANDATORY STYLE RULES:
 1. SCENARIO-FIRST: Open most questions with a short realistic scenario using a named person or company in Indian context (e.g. "Priya is a PM at a fintech startup...", "Ravi's ed-tech team notices..."). The student must APPLY a concept from the content to the scenario, not recall a definition.
 2. BANNED stems: "What is the term for...", "What is the primary purpose of...", "What is the definition of...", "Which of the following describes...". Never ask the student to name or define a term.
 3. MCQ: exactly 4 options, "correct" is one integer index 0-3. Distractors must be plausible conclusions or actions a weaker student would genuinely pick — never obviously wrong, never jokes.
-4. MSQ: exactly 4 options, "correct" is an array of 2-3 indices. Prefer mapping style: the scenario lists items (X), (Y), (Z) and each option maps one item to a concept — student selects the correct mappings. All 4 options MUST be mutually exclusive statements; never write two options that mean the same thing.
+4. MSQ: exactly 4 options, "correct" is an array of 2-3 indices. Prefer mapping style: the scenario lists items (X), (Y), (Z) and each option maps one item to a concept — student selects the correct mappings. CRITICAL: all 4 options MUST be completely independent statements — no option may contain, imply, or restate another option. Never write two options that overlap in meaning even partially. Test: could a student reasonably believe two options say the same thing? If yes, rewrite.
 5. NAT = NUMERICAL Answer Type. "correct" MUST be a single number as a string (e.g. "3000", "2.5", "210"). Build a real calculation using formulas from the content (CLV, CAC, RPS, AOV, conversion rate, ROAS, retention, LTV:CAC, sprint capacity, campaign budget). Give all input numbers in the question and state the formula if the content defines one. NEVER ask for a word, term, or name in NAT — only numbers.
 6. Difficulty mix: about 30% moderate single-concept, 50% application, 20% multi-step or multi-concept analysis.
 7. Explanations: state why the correct answer is right, then one short line on why EACH wrong option fails. For NAT, show the full calculation step by step.
@@ -1291,7 +1296,14 @@ function pick(qId, idx, type) {
     answers[qId] = cur2.includes(idx) ? cur2.filter(x => x !== idx) : [...cur2, idx];
   }
   const q = questions.find(x => x.id === qId);
-  if (q) renderQuestion();
+  // Only re-render options (not the whole question) to avoid blowing away NAT input
+  if (q && q.type !== 'NAT') renderQuestion();
+  else if (q) {
+    // Just update option selected states without full re-render
+    document.querySelectorAll('.opt-card').forEach((el, i) => {
+      el.className = 'opt-card' + (isOptSelected(q, i) ? (q.type==='MCQ'?' sel-mcq':' sel-msq') : '');
+    });
+  }
   renderQuizMap();
 }
 
@@ -1425,33 +1437,136 @@ async function reviewAttempt(id) {
   }
 }
 
-// ── PDF download (preserves colours) ─────────────────
+// ── PDF download — clean text layout (no screenshot blur) ─
+function buildPDFHTML(qs, ans, title, scoreStr) {
+  const KEYS = ['A','B','C','D'];
+  const items = qs.map((q, qi) => {
+    const a = ans[q.id];
+    let correctIdx, userIdx, isCorrect;
+    if (q.type === 'NAT') {
+      isCorrect = natMatch(a, q.correct);
+      correctIdx = null; userIdx = null;
+    } else if (q.type === 'MCQ') {
+      isCorrect = (a === q.correct);
+      correctIdx = q.correct; userIdx = a;
+    } else {
+      const ca = Array.isArray(q.correct) ? q.correct : [];
+      const ua = Array.isArray(a) ? a : [];
+      isCorrect = ca.length === ua.length && ca.every(x => ua.includes(x));
+      correctIdx = ca; userIdx = ua;
+    }
+    const badge = isCorrect ? '#16a34a' : '#dc2626';
+    const badgeText = isCorrect ? 'CORRECT' : 'WRONG';
+    const points = q.type==='MCQ' ? (isCorrect?'+4':'-1') : (isCorrect?'+4':'0');
+
+    let optRows = '';
+    if (q.type === 'NAT') {
+      optRows = `<div style="margin:6px 0 4px">
+        <div style="color:#16a34a;font-size:11px;font-weight:700">CORRECT ANS: ${q.correct}</div>
+        ${a!==undefined&&a!==''?`<div style="color:${isCorrect?'#16a34a':'#dc2626'};font-size:11px">YOUR ANSWER: ${a}</div>`:'<div style="color:#94a3b8;font-size:11px">NOT ATTEMPTED</div>'}
+      </div>`;
+    } else {
+      optRows = (q.options||[]).map((opt,i) => {
+        const isC = Array.isArray(correctIdx)?correctIdx.includes(i):correctIdx===i;
+        const isU = Array.isArray(userIdx)?userIdx.includes(i):userIdx===i;
+        const bg = isC?'#f0fdf4':isU?'#fef2f2':'#f8fafc';
+        const border = isC?'#16a34a':isU?'#dc2626':'#e2e8f0';
+        const label = isC&&isU?'✓ YOUR ANSWER (CORRECT)':isC?'✓ CORRECT':isU?'✗ YOUR ANSWER':'';
+        return `<div style="display:flex;align-items:baseline;gap:8px;padding:5px 8px;border-radius:6px;background:${bg};border:1px solid ${border};margin:3px 0">
+          <b style="min-width:14px;font-size:11px">${KEYS[i]}.</b>
+          <span style="font-size:11px;flex:1">${opt}</span>
+          ${label?`<span style="font-size:9px;font-weight:700;color:${isC?'#16a34a':'#dc2626'};white-space:nowrap">${label}</span>`:''}
+        </div>`;
+      }).join('');
+    }
+    return `<div style="margin-bottom:14px;padding:12px;border:1px solid #e2e8f0;border-radius:8px;page-break-inside:avoid">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <span style="font-size:10px;font-weight:700;color:#64748b">Q${qi+1} · ${q.type}</span>
+        <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;background:${badge}22;color:${badge}">${badgeText} ${points}</span>
+      </div>
+      <p style="font-size:12px;font-weight:600;color:#0f172a;margin:0 0 7px;line-height:1.5">${q.question}</p>
+      ${optRows}
+      <div style="margin-top:7px;padding:7px 9px;background:#f1f5f9;border-radius:6px;border-left:3px solid #6366f1">
+        <div style="font-size:9px;font-weight:700;color:#6366f1;margin-bottom:3px">EXPLANATION</div>
+        <div style="font-size:10.5px;color:#334155;line-height:1.55">${q.explanation||''}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  return `<!DOCTYPE html><html><head><meta charset="utf-8">
+  <style>body{font-family:Arial,sans-serif;padding:28px 32px;color:#0f172a;max-width:720px;margin:0 auto}
+  h1{font-size:18px;margin:0 0 4px}h2{font-size:13px;font-weight:400;color:#64748b;margin:0 0 16px}
+  .summary{display:flex;gap:10px;margin-bottom:18px}.sum-box{padding:8px 14px;border-radius:6px;border:1px solid #e2e8f0;text-align:center}
+  .sum-box b{display:block;font-size:17px}.sum-box span{font-size:9px;color:#64748b;text-transform:uppercase}
+  hr{border:none;border-top:1px solid #e2e8f0;margin:14px 0}</style></head>
+  <body>
+  <h1>AceMock — ${title}</h1>
+  <h2>Score: ${scoreStr} · Generated ${new Date().toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</h2>
+  <hr>${items}</body></html>`;
+}
+
 async function downloadPDF() {
   const btn = document.getElementById('dl-btn');
   btn.disabled = true;
   const oldHtml = btn.innerHTML;
-  btn.innerHTML = 'Preparing PDF…';
+  btn.innerHTML = '⏳ Preparing…';
   try {
-    const src = document.querySelector('.results-scroll');
     const stamp = new Date().toISOString().slice(0,16).replace('T','_').replace(':','-');
-    const slug = (currentSectionTitle || 'Paper').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40) || 'Paper';
+    const slug = (currentSectionTitle||'Paper').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40)||'Paper';
+    const scoreStr = `${document.getElementById('r-score').textContent.trim()}`;
+    const html = buildPDFHTML(questions, answers, currentSectionTitle||'Paper', scoreStr);
     await html2pdf().set({
-      margin: [8, 8, 10, 8],
-      filename: `AceMock_${slug}_${stamp}.pdf`,
-      image: { type: 'jpeg', quality: 0.95 },
-      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#f8fafc',
-        onclone: (doc) => {
-          const a = doc.getElementById('results-actions');
-          if (a) a.style.display = 'none';
-          const scroll = doc.querySelector('.results-scroll');
-          if (scroll) { scroll.style.overflow = 'visible'; scroll.style.maxWidth = '760px'; }
-        }
-      },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-      pagebreak: { mode: ['css','legacy'], avoid: ['.review-card','.score-hero','.stat-card'] }
-    }).from(src).save();
+      margin:[10,10,12,10],
+      filename:`AceMock_${slug}_${stamp}.pdf`,
+      image:{type:'jpeg',quality:0.98},
+      html2canvas:{scale:2,backgroundColor:'#ffffff'},
+      jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},
+      pagebreak:{mode:['css','legacy'],avoid:['.review-card']}
+    }).from(html).save();
   } catch(e) {
-    alert('PDF generation failed: ' + (e.message || 'unknown error') + '. Try again or take a screenshot.');
+    alert('PDF failed: '+(e.message||'unknown error'));
+  }
+  btn.innerHTML = oldHtml;
+  btn.disabled = false;
+}
+
+async function downloadAllPDF() {
+  const keys = Object.keys(allSectionResults).sort((a,b)=>a-b);
+  if (keys.length < 2) { toast('Finish at least 2 sections first'); return; }
+  const btn = document.getElementById('dl-all-btn');
+  btn.disabled = true;
+  const oldHtml = btn.innerHTML;
+  btn.innerHTML = '⏳ Building…';
+  try {
+    const stamp = new Date().toISOString().slice(0,10);
+    // Build combined HTML: each section separated by a page-break div
+    let combined = `<!DOCTYPE html><html><head><meta charset="utf-8">
+    <style>body{font-family:Arial,sans-serif;padding:28px 32px;color:#0f172a;max-width:720px;margin:0 auto}
+    h1{font-size:18px;margin:0 0 4px}h2{font-size:13px;font-weight:400;color:#64748b;margin:0 0 16px}
+    hr{border:none;border-top:1px solid #e2e8f0;margin:14px 0}
+    .sec-break{page-break-before:always;margin-top:0}
+    div[style*="border:1px solid #e2e8f0"]{page-break-inside:avoid}</style></head><body>`;
+    keys.forEach((k, ki) => {
+      const r = allSectionResults[k];
+      const scoreStr = `${r.score}/${r.maxScore} (${r.pct}%)`;
+      const inner = buildPDFHTML(r.questions, r.answers, r.title, scoreStr);
+      // Extract just the body content from each section's HTML
+      const bodyMatch = inner.match(/<body>([\s\S]*)<\/body>/);
+      const content = bodyMatch ? bodyMatch[1] : inner;
+      if (ki > 0) combined += `<div class="sec-break"></div>`;
+      combined += content;
+    });
+    combined += '</body></html>';
+    await html2pdf().set({
+      margin:[10,10,12,10],
+      filename:`AceMock_AllSections_${stamp}.pdf`,
+      image:{type:'jpeg',quality:0.98},
+      html2canvas:{scale:2,backgroundColor:'#ffffff'},
+      jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},
+      pagebreak:{mode:['css','legacy']}
+    }).from(combined).save();
+  } catch(e) {
+    alert('PDF failed: '+(e.message||'unknown error'));
   }
   btn.innerHTML = oldHtml;
   btn.disabled = false;
@@ -1515,6 +1630,8 @@ function buildResults(elapsed) {
   if (oldNext) oldNext.remove();
   const oldBack = document.getElementById('hist-back-btn');
   if (oldBack) oldBack.remove();
+  const oldBackSec = document.getElementById('back-sections-btn');
+  if (oldBackSec) oldBackSec.remove();
 
   if (viewingHistory) {
     const b = document.createElement('button');
@@ -1525,8 +1642,24 @@ function buildResults(elapsed) {
     document.getElementById('results-actions').prepend(b);
   } else {
     if (activePart >= 0 && parts.length > 1) {
+      // Store result for download-all
+      allSectionResults[activePart] = {
+        title: currentSectionTitle,
+        score, maxScore, pct, elapsed,
+        questions: [...questions],
+        answers: { ...answers }
+      };
       partScores[activePart] = { score, pct };
       renderParts();
+
+      // Back to sections button (point 3)
+      const bk = document.createElement('button');
+      bk.id = 'back-sections-btn';
+      bk.className = 'btn-new';
+      bk.textContent = '← All sections';
+      bk.onclick = () => { show('s-setup'); };
+      document.getElementById('results-actions').prepend(bk);
+
       const nextIdx = parts.findIndex((_, i) => !partScores[i]);
       if (nextIdx !== -1) {
         const b = document.createElement('button');
@@ -1536,6 +1669,11 @@ function buildResults(elapsed) {
         b.onclick = () => startPart(nextIdx);
         document.getElementById('results-actions').prepend(b);
       }
+
+      // Show download-all once more than one section is done
+      const doneCount = Object.keys(allSectionResults).length;
+      const dlAll = document.getElementById('dl-all-btn');
+      if (dlAll) dlAll.style.display = doneCount >= 2 ? '' : 'none';
     }
     saveAttempt(score, maxScore, pct, elapsed);
   }
@@ -1610,6 +1748,7 @@ function retry() {
 function newExam() {
   clearInterval(timerInt);
   document.getElementById('gen-btn').disabled = false;
+  allSectionResults = {};
   renderParts();
   show('s-setup');
 }
