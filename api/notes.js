@@ -13,13 +13,23 @@ export default async function handler(req) {
 
   try {
     const body = await req.json();
-    const masaiText = body.masaiText || '';
-    const transcriptText = body.transcriptText || '';
     const topicTitle = body.topicTitle || 'PM Module';
     const masaiImages = body.masaiImages || [];
     const useGroq = body.useGroq === true;
 
-    if (!transcriptText && !masaiText) {
+    // Support both old format (masaiText/transcriptText) and new sources[] format
+    let masaiText = '';
+    let transcriptText = '';
+    if (body.sources && Array.isArray(body.sources)) {
+      // New format: sources array [{label, text}]
+      const parts = body.sources.map(s => '=== ' + s.label + ' ===\n' + s.text).join('\n\n');
+      masaiText = parts; // use masaiText as the combined text block
+    } else {
+      masaiText = body.masaiText || '';
+      transcriptText = body.transcriptText || '';
+    }
+
+    if (!masaiText && !transcriptText) {
       return new Response(JSON.stringify({ error: 'Provide at least one input' }), { status: 400 });
     }
 
