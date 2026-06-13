@@ -619,6 +619,20 @@ Works with any text — lecture notes, PDF content, chapter summaries. Minimum 3
       </div>
     </div>
 
+    <div style="margin-top:14px">
+      <span class="cfg-label">AI Model for Quiz</span>
+      <div class="model-selector-row">
+        <button class="model-btn" id="quiz-claude-btn" onclick="selectQuizModel('claude')">
+          🧠 Claude Haiku <span style="font-size:10px;padding:1px 5px;background:var(--indigo-l);color:var(--indigo);border-radius:4px;font-weight:700">Paid</span>
+          <div style="font-size:10px;font-weight:400;color:var(--text3);margin-top:2px">Best quality · ~$0.04/session</div>
+        </button>
+        <button class="model-btn active-groq" id="quiz-groq-btn" onclick="selectQuizModel('groq')">
+          ⚡ Groq (Llama) <span style="font-size:10px;padding:1px 5px;background:var(--cyan-l);color:var(--cyan);border-radius:4px;font-weight:700">Free</span>
+          <div style="font-size:10px;font-weight:400;color:var(--text3);margin-top:2px">Good quality · $0 cost</div>
+        </button>
+      </div>
+    </div>
+
     <button class="gen-btn" id="gen-btn" onclick="generateNext()">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
       Generate exam paper
@@ -870,6 +884,47 @@ Works with any text — lecture notes, PDF content, chapter summaries. Minimum 3
   </div>
 </div>
 
+<!-- ═══ NOTES → QUIZ MODAL ═══ -->
+<div class="veil" id="notes-quiz-veil" onclick="if(event.target===this)closeNotesQuizModal()">
+  <div class="modal">
+    <div class="modal-title">Set up your quiz</div>
+    <div class="modal-sub">Choose style and model before generating — questions cost API credits.</div>
+
+    <div style="margin-bottom:14px">
+      <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.3px;margin-bottom:8px">Question Style</div>
+      <div style="display:flex;gap:8px">
+        <div class="style-toggle active" id="nq-style-standard" onclick="setNqStyle('standard')" style="flex:1;cursor:pointer">
+          <b style="display:block;font-size:13px">Standard</b>
+          <span style="font-size:10.5px;opacity:.75">Mixed difficulty</span>
+        </div>
+        <div class="style-toggle" id="nq-style-offline" onclick="setNqStyle('offline')" style="flex:1;cursor:pointer">
+          <b style="display:block;font-size:13px">🎯 Offline exam</b>
+          <span style="font-size:10.5px;opacity:.75">Masai mock style</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-bottom:18px">
+      <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.3px;margin-bottom:8px">AI Model</div>
+      <div style="display:flex;gap:8px">
+        <button class="model-btn" id="nq-claude-btn" onclick="setNqModel('claude')" style="flex:1">
+          🧠 Claude Haiku <span style="font-size:10px;padding:1px 5px;background:var(--indigo-l);color:var(--indigo);border-radius:4px;font-weight:700">Paid</span>
+          <div style="font-size:10px;font-weight:400;color:var(--text3);margin-top:2px">Best quality · ~$0.04</div>
+        </button>
+        <button class="model-btn active-groq" id="nq-groq-btn" onclick="setNqModel('groq')" style="flex:1">
+          ⚡ Groq (Llama) <span style="font-size:10px;padding:1px 5px;background:var(--cyan-l);color:var(--cyan);border-radius:4px;font-weight:700">Free</span>
+          <div style="font-size:10px;font-weight:400;color:var(--text3);margin-top:2px">Good quality · $0 cost</div>
+        </button>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="nav-btn" onclick="closeNotesQuizModal()">Cancel</button>
+      <button class="nav-btn primary" onclick="confirmNotesQuiz()">Generate quiz →</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ── State ─────────────────────────────────────────────
 let questions = [];
@@ -881,6 +936,13 @@ let startMs   = 0;
 let lastTimeMins = 30;
 let activeTypes = new Set(['MCQ','MSQ','NAT']);
 let examStyle = 'standard';
+let quizModel = 'groq'; // default: Groq (free)
+
+function selectQuizModel(model) {
+  quizModel = model;
+  document.getElementById('quiz-claude-btn').className = 'model-btn' + (model === 'claude' ? ' active-claude' : '');
+  document.getElementById('quiz-groq-btn').className = 'model-btn' + (model === 'groq' ? ' active-groq' : '');
+}
 let topicName = ''; // user-entered main topic name
 
 function onTopicChange() {
@@ -895,6 +957,7 @@ function setStyle(s) {
 let currentSectionTitle = '';
 let viewingHistory = false;
 let allSectionResults = {};
+let preloadedSections = {}; // cache for pre-generated section questions
 
 // ── Supabase (attempt history) ───────────────────────
 // Paste your project values below. Get them from:
@@ -1392,20 +1455,14 @@ async function startGeneration(overrideText) {
   }, 2200);
 
   try {
-    // Multi-section: preload ALL questions upfront in 2 parallel calls
-    if (parts.length > 1 && activePart === -1) {
-      document.getElementById('load-title').textContent = 'Loading all sections upfront…';
-      await preloadAllSections(count, types);
-      activePart = 0;
-      currentSectionTitle = (topicName || parts[0].title || 'Section') + '_1';
-    }
-
     let qs;
     if (preloadedSections[activePart] && preloadedSections[activePart].length) {
+      // Use cached questions if available
       qs = preloadedSections[activePart];
     } else {
-      // Single section or fallback — 2 parallel calls
+      // Generate questions for this section
       qs = await callGroq(content, count, types);
+      if (activePart >= 0) preloadedSections[activePart] = qs; // cache for retry
     }
     clearInterval(stepInt);
     if (!qs || !qs.length) throw new Error('No questions returned');
@@ -1500,12 +1557,13 @@ Rules:
 CONTENT:
 ${sampleContent(content)}`;
 
-  const res = await fetch('/api/generate', {
+  const res = await fetch('https://acemock-generate.prakashkoulagi1996.workers.dev', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({
       system: systemPrompt,
       user: userPrompt,
+      useGroq: quizModel === 'groq',
       // Groq free tier counts prompt + reserved output against a 12k TPM
       // limit, so reserve only what this paper size actually needs.
       max_tokens: Math.min(6000, 600 + count * 220)
@@ -2154,6 +2212,7 @@ function newExam() {
   clearInterval(timerInt);
   document.getElementById('gen-btn').disabled = false;
   allSectionResults = {};
+  preloadedSections = {};
   topicName = '';
   const ti = document.getElementById('topic-name');
   if (ti) ti.value = '';
@@ -2467,7 +2526,7 @@ async function generateNotes() {
     let diagramImages = [];
     // (vision extraction skipped here — handled separately if needed)
 
-    const res = await fetch('/api/notes', {
+    const res = await fetch('https://acemock-notes.prakashkoulagi1996.workers.dev', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -2622,6 +2681,182 @@ async function getFreshQuestions() {
   }
   freshMode = false;
   btn.disabled = false; btn.textContent = '🔄 Fresh questions (Groq)';
+}
+
+
+// ── Save notes to Supabase ────────────────────────────
+async function saveNotesToSupabase() {
+  if (!notesText) { toast('No notes to save'); return; }
+  const btn = document.getElementById('btn-save-notes');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  const topic = document.getElementById('notes-topic').value.trim() || 'PM Module';
+  try {
+    if (!sb) throw new Error('Not connected to Supabase');
+    if (!currentUser) { show('s-auth'); return; }
+    const { error } = await sb.from('acemock_notes').insert({
+      user_id: currentUser.id,
+      topic,
+      notes: notesText,
+      created_at: new Date().toISOString()
+    });
+    if (error) throw error;
+    toast('✓ Notes saved to account');
+  } catch(e) {
+    toast('Save failed: ' + (e.message || 'error'));
+  }
+  btn.disabled = false;
+  btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Save to account';
+}
+
+// ── Use notes for quiz ────────────────────────────────
+function useNotesForQuiz() {
+  if (!notesText) { toast('Generate notes first'); return; }
+  // Reset modal to defaults
+  setNqStyle('standard');
+  setNqModel('groq');
+  document.getElementById('notes-quiz-veil').classList.add('open');
+}
+
+function closeNotesQuizModal() {
+  document.getElementById('notes-quiz-veil').classList.remove('open');
+}
+
+let nqStyle = 'standard';
+let nqModel = 'groq';
+
+function setNqStyle(s) {
+  nqStyle = s;
+  document.getElementById('nq-style-standard').classList.toggle('active', s === 'standard');
+  document.getElementById('nq-style-offline').classList.toggle('active', s === 'offline');
+}
+
+function setNqModel(m) {
+  nqModel = m;
+  document.getElementById('nq-claude-btn').className = 'model-btn' + (m === 'claude' ? ' active-claude' : '');
+  document.getElementById('nq-groq-btn').className = 'model-btn' + (m === 'groq' ? ' active-groq' : '');
+}
+
+function confirmNotesQuiz() {
+  closeNotesQuizModal();
+  // Apply chosen style and model to quiz settings
+  setStyle(nqStyle);
+  selectQuizModel(nqModel);
+  // Load notes into quiz content
+  document.getElementById('content').value = notesText;
+  rebuildParts();
+  switchTab('quiz');
+  toast('✓ Notes loaded — hit Generate when ready');
+}
+
+// ── Download notes dropdown ───────────────────────────
+function toggleDlDropdown() {
+  const dd = document.getElementById('dl-dropdown');
+  dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+  // Close on outside click
+  setTimeout(() => {
+    document.addEventListener('click', function closeDl(e) {
+      if (!document.getElementById('dl-dropdown-wrap').contains(e.target)) {
+        dd.style.display = 'none';
+        document.removeEventListener('click', closeDl);
+      }
+    });
+  }, 10);
+}
+
+function downloadNotes(format) {
+  document.getElementById('dl-dropdown').style.display = 'none';
+  if (!notesText) { toast('No notes to download'); return; }
+  const topic = document.getElementById('notes-topic').value.trim() || 'PM Module';
+  const slug = topic.replace(/[^a-zA-Z0-9]+/g,'-').slice(0,40);
+  const stamp = new Date().toISOString().slice(0,10);
+
+  if (format === 'txt') {
+    const blob = new Blob([notesText], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `AceMock_Notes_${slug}_${stamp}.txt`;
+    a.click();
+  } else if (format === 'doc') {
+    const html = `<html><body style="font-family:Arial,sans-serif;font-size:12pt;line-height:1.6;padding:20px">${document.getElementById('notes-body').innerHTML}</body></html>`;
+    const blob = new Blob([html], { type: 'application/msword' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `AceMock_Notes_${slug}_${stamp}.doc`;
+    a.click();
+  } else if (format === 'pdf') {
+    const el = document.getElementById('notes-body');
+    html2pdf().set({
+      margin: [12,14],
+      filename: `AceMock_Notes_${slug}_${stamp}.pdf`,
+      image: { type:'jpeg', quality:0.97 },
+      html2canvas: { scale:2, backgroundColor:'#ffffff' },
+      jsPDF: { unit:'mm', format:'a4', orientation:'portrait' }
+    }).from(el).save();
+  }
+}
+
+// ── Load saved notes ──────────────────────────────────
+async function loadSavedNotes() {
+  const listEl = document.getElementById('saved-notes-list');
+  if (!sb || !currentUser) {
+    listEl.innerHTML = '<div class="hist-empty">Log in to see your saved notes.</div>';
+    return;
+  }
+  listEl.innerHTML = '<div class="hist-empty">Loading…</div>';
+  try {
+    const { data, error } = await sb.from('acemock_notes')
+      .select('id, topic, created_at, notes')
+      .eq('user_id', currentUser.id)
+      .order('created_at', { ascending: false })
+      .limit(50);
+    if (error) throw error;
+    if (!data || !data.length) {
+      listEl.innerHTML = '<div class="hist-empty">No saved notes yet. Generate notes and click "Save to account".</div>';
+      return;
+    }
+    listEl.innerHTML = data.map(n => {
+      const d = new Date(n.created_at);
+      const when = d.toLocaleDateString('en-IN',{day:'numeric',month:'short'}) + ', ' +
+                   d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+      const preview = (n.notes || '').slice(0,120).replace(/[#*`]/g,'') + '…';
+      return `<div class="saved-note-card">
+        <div style="flex:1;min-width:0">
+          <div class="snc-title">${esc(n.topic || 'Untitled')}</div>
+          <div class="snc-meta">${when}</div>
+          <div style="font-size:11.5px;color:var(--text3);margin-top:4px;line-height:1.5">${esc(preview)}</div>
+        </div>
+        <div class="snc-actions">
+          <button class="snc-btn" onclick="readNote('${n.id}')">Read</button>
+          <button class="snc-btn" onclick="quizFromNote('${n.id}')">→ Quiz</button>
+          <button class="snc-btn danger" onclick="deleteSavedNote('${n.id}')">Delete</button>
+        </div>
+      </div>`;
+    }).join('');
+    // store notes data for read/quiz
+    window._savedNotesCache = Object.fromEntries(data.map(n => [n.id, n]));
+  } catch(e) {
+    listEl.innerHTML = `<div class="hist-empty">Could not load notes: ${esc(e.message||'error')}</div>`;
+  }
+}
+
+function readNote(id) {
+  const n = window._savedNotesCache && window._savedNotesCache[id];
+  if (!n) { toast('Note not found'); return; }
+  notesText = n.notes;
+  document.getElementById('notes-topic').value = n.topic || '';
+  document.getElementById('notes-output-title').textContent = n.topic || 'Notes';
+  document.getElementById('notes-body').innerHTML = renderMarkdown(n.notes);
+  document.getElementById('notes-output').classList.add('show');
+  switchTab('notes');
+}
+
+function quizFromNote(id) {
+  const n = window._savedNotesCache && window._savedNotesCache[id];
+  if (!n) { toast('Note not found'); return; }
+  document.getElementById('content').value = n.notes;
+  rebuildParts();
+  switchTab('quiz');
+  toast('✓ Notes loaded — generate your quiz');
 }
 
 // Boot: decide between login screen and the app
