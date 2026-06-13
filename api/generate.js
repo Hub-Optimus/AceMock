@@ -20,43 +20,43 @@ export default async function handler(req) {
   }
 
   try {
-    const { system, user } = await req.json();
+    const { system, user, max_tokens } = await req.json();
     if (!user) {
       return new Response(JSON.stringify({ error: 'Missing content' }), { status: 400 });
     }
 
-    const apiKey = process.env.GROQ_API_KEY;
+    const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
-      return new Response(JSON.stringify({ error: 'API key not configured' }), { status: 500 });
+      return new Response(JSON.stringify({ error: 'ANTHROPIC_API_KEY not configured' }), { status: 500 });
     }
 
-    const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        temperature: 0.4,
-        max_tokens: 8192,
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: max_tokens || 4096,
+        system: system,
         messages: [
-          { role: 'system', content: system },
-          { role: 'user',   content: user },
+          { role: 'user', content: user }
         ],
       }),
     });
 
-    if (!groqRes.ok) {
-      const errData = await groqRes.json().catch(() => ({}));
-      return new Response(JSON.stringify({ error: errData.error?.message || `Groq error ${groqRes.status}` }), {
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      return new Response(JSON.stringify({ error: errData.error?.message || `API error ${res.status}` }), {
         status: 502,
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
-    const data = await groqRes.json();
-    const text = data.choices?.[0]?.message?.content || '';
+    const data = await res.json();
+    const text = data.content?.[0]?.text || '';
 
     return new Response(JSON.stringify({ text }), {
       status: 200,
