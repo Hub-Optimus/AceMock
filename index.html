@@ -2437,13 +2437,34 @@ async function generateNotes() {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.error || `API error ${res.status}`);
     }
-    const data = await res.json();
-    notesText = data.notes || '';
-    if (!notesText) throw new Error('No notes returned');
 
-    document.getElementById('notes-output-title').textContent = topic;
-    document.getElementById('notes-body').innerHTML = renderMarkdown(notesText);
-    document.getElementById('notes-output').classList.add('show');
+    const contentType = res.headers.get('content-type') || '';
+    if (contentType.includes('text/plain')) {
+      // True streaming — show notes as they arrive
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      const bodyEl = document.getElementById('notes-body');
+      document.getElementById('notes-output-title').textContent = topic;
+      document.getElementById('notes-output').classList.add('show');
+      bodyEl.innerHTML = '<em style="color:var(--text3)">Generating — notes will appear here as they stream in...</em>';
+      notesText = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        notesText += decoder.decode(value, { stream: true });
+        bodyEl.innerHTML = renderMarkdown(notesText);
+        bodyEl.scrollTop = bodyEl.scrollHeight;
+      }
+    } else {
+      const data = await res.json();
+      notesText = data.notes || '';
+      if (!notesText) throw new Error('No notes returned');
+      document.getElementById('notes-output-title').textContent = topic;
+      document.getElementById('notes-body').innerHTML = renderMarkdown(notesText);
+      document.getElementById('notes-output').classList.add('show');
+    }
+
+    if (!notesText) throw new Error('No notes returned');
     document.getElementById('btn-save-notes').disabled = false;
     toast('✓ Notes generated');
   } catch(err) {
