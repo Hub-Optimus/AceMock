@@ -320,6 +320,28 @@ a{color:var(--indigo);text-decoration:none}
 .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--text);color:#fff;padding:10px 18px;border-radius:10px;font-size:13px;font-weight:500;z-index:60;transition:transform .3s cubic-bezier(.34,1.4,.64,1);box-shadow:0 10px 30px rgba(15,23,42,.3)}
 .toast.show{transform:translateX(-50%) translateY(0)}
 
+/* ── Topic name input ── */
+.topic-field{margin-top:12px;display:none}
+.topic-field.show{display:block;animation:qfade .2s ease}
+.topic-field label{display:block;font-size:11.5px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.3px;margin-bottom:5px}
+.topic-field input{width:100%;padding:10px 13px;border:1.5px solid var(--indigo-b);border-radius:10px;font-size:13.5px;color:var(--text);background:var(--indigo-l);outline:none;transition:border .15s}
+.topic-field input:focus{border-color:var(--indigo)}
+.topic-field input::placeholder{color:var(--text3)}
+
+/* ── Section preview drawer ── */
+.part-preview{display:none;margin-top:6px;padding:10px 12px;background:var(--bg2);border-radius:8px;border:1px solid var(--border);font-size:11.5px;color:var(--text2);line-height:1.6;white-space:pre-wrap;max-height:160px;overflow-y:auto}
+.part-preview.open{display:block;animation:qfade .18s ease}
+.part-peek{font-size:11px;color:var(--indigo);font-weight:600;cursor:pointer;margin-left:8px;white-space:nowrap}
+.part-peek:hover{text-decoration:underline}
+
+/* ── History grouped by topic ── */
+.hist-topic-group{margin-bottom:18px}
+.hist-topic-name{font-size:13px;font-weight:700;color:var(--text);padding:8px 12px;background:var(--bg2);border-radius:9px;border:1.5px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:space-between;transition:all .15s}
+.hist-topic-name:hover{border-color:var(--indigo-b)}
+.hist-topic-name b{font-size:11px;color:var(--text3);font-weight:400}
+.hist-topic-body{margin-top:6px;display:flex;flex-direction:column;gap:6px}
+.hist-topic-body.collapsed{display:none}
+
 /* ── Section split panel ── */.parts-panel{margin-top:16px;display:none}
 .parts-panel.show{display:block;animation:qfade .25s ease}
 .parts-head{font-size:11.5px;font-weight:600;color:var(--text2);letter-spacing:.3px;text-transform:uppercase;margin-bottom:4px}
@@ -427,7 +449,11 @@ a{color:var(--indigo);text-decoration:none}
 Works with any text — lecture notes, PDF content, chapter summaries. Minimum 30 real words needed."></textarea>
 
     <div class="parts-panel" id="parts-panel">
-      <div class="parts-head">Sections — full document coverage</div>
+      <div class="topic-field" id="topic-field">
+        <label for="topic-name">Topic / Module name</label>
+        <input id="topic-name" type="text" placeholder="e.g. Module 1 — Digital Metrics, Week 3 Strategy…" oninput="onTopicChange()">
+      </div>
+      <div class="parts-head" style="margin-top:12px">Sections — full document coverage</div>
       <div class="parts-sub" id="parts-sub"></div>
       <div class="parts-grid" id="parts-grid"></div>
     </div>
@@ -630,7 +656,12 @@ let timerInt  = null;
 let startMs   = 0;
 let lastTimeMins = 30;
 let activeTypes = new Set(['MCQ','MSQ','NAT']);
-let examStyle = 'standard'; // 'standard' | 'offline'
+let examStyle = 'standard';
+let topicName = ''; // user-entered main topic name
+
+function onTopicChange() {
+  topicName = document.getElementById('topic-name').value.trim();
+}
 
 function setStyle(s) {
   examStyle = s;
@@ -912,26 +943,37 @@ function rebuildParts() {
 function renderParts() {
   const panel = document.getElementById('parts-panel');
   const grid = document.getElementById('parts-grid');
+  const topicField = document.getElementById('topic-field');
   if (parts.length <= 1) {
     panel.classList.remove('show');
+    topicField.classList.remove('show');
     grid.innerHTML = '';
     updateGenBtn();
     return;
   }
+  topicField.classList.add('show');
   const nextIdx = parts.findIndex((_, i) => !partScores[i]);
+  const prefix = topicName || 'Section';
   document.getElementById('parts-sub').textContent =
-    `Your document was split at topic boundaries into ${parts.length} sections so 100% of it gets covered. Attempt them in order — each section sends only its own text to the AI.`;
+    `Split into ${parts.length} sections at topic boundaries — 100% covered. Name the topic above so history is easy to track.`;
   grid.innerHTML = parts.map((p, i) => {
     const done = !!partScores[i];
     const words = p.text.split(/\s+/).length;
     const cls = 'part-card' + (done ? ' done' : '') + (i === nextIdx ? ' next' : '');
     const scoreHtml = done ? `<span class="part-score">✓ ${partScores[i].pct}%</span>` : '';
     const btnLabel = done ? 'Retry' : (i === nextIdx ? 'Start →' : 'Attempt');
-    return `<div class="${cls}">
+    // preview: first 300 chars of section text, trimmed to sentence boundary
+    const rawPreview = p.text.slice(0, 320).replace(/\s+/g,' ').trim();
+    const preview = rawPreview.slice(0, rawPreview.lastIndexOf(' ', 280) || 280) + '…';
+    return `<div class="${cls}" id="part-card-${i}">
       <div class="part-num">${done ? '✓' : i+1}</div>
       <div class="part-info">
-        <div class="part-name">${esc(p.title || 'Section '+(i+1))}</div>
+        <div class="part-name" style="display:flex;align-items:center;gap:4px">
+          ${esc(p.title || 'Section '+(i+1))}
+          <span class="part-peek" onclick="togglePreview(${i},event)">👁 Preview</span>
+        </div>
         <div class="part-meta">${words.toLocaleString()} words</div>
+        <div class="part-preview" id="part-preview-${i}">${esc(preview)}</div>
       </div>
       ${scoreHtml}
       <button class="part-btn" onclick="startPart(${i})">${btnLabel}</button>
@@ -939,6 +981,14 @@ function renderParts() {
   }).join('');
   panel.classList.add('show');
   updateGenBtn();
+}
+
+function togglePreview(i, e) {
+  e.stopPropagation();
+  const el = document.getElementById(`part-preview-${i}`);
+  el.classList.toggle('open');
+  const btn = e.target;
+  btn.textContent = el.classList.contains('open') ? '🙈 Hide' : '👁 Preview';
 }
 
 function esc(s) {
@@ -960,7 +1010,9 @@ function updateGenBtn() {
 
 function startPart(i) {
   activePart = i;
-  currentSectionTitle = parts[i].title || `Section ${i+1}`;
+  const base = topicName || (parts[i].title || 'Section');
+  const suffix = parts.length > 1 ? `_${i+1}` : '';
+  currentSectionTitle = base + suffix;
   viewingHistory = false;
   startGeneration(parts[i].text);
 }
@@ -972,7 +1024,8 @@ function generateNext() {
     startPart(next === -1 ? 0 : next);
   } else {
     activePart = -1;
-    currentSectionTitle = 'Full document';
+    const base = topicName || 'Full document';
+    currentSectionTitle = base;
     startGeneration();
   }
 }
@@ -1449,33 +1502,65 @@ async function openHistory() {
     const { data, error } = await sb.from('acemock_attempts')
       .select('id, created_at, section_title, score, max_score, pct, time_taken')
       .order('created_at', { ascending: false })
-      .limit(100);
+      .limit(200);
     if (error) throw error;
     if (!data || !data.length) {
-      list.innerHTML = '<div class="hist-empty">No attempts yet. Finish a paper and it will appear here automatically.</div>';
+      list.innerHTML = '<div class="hist-empty">No attempts yet. Finish a section and it will appear here automatically.</div>';
       return;
     }
-    list.innerHTML = data.map(r => {
-      const d = new Date(r.created_at);
-      const when = d.toLocaleDateString('en-IN', {day:'numeric', month:'short'}) + ', ' +
-                   d.toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit'});
-      const mins = Math.floor((r.time_taken||0)/60), secs = (r.time_taken||0)%60;
-      const cls = r.pct >= 85 ? 'hp-good' : r.pct >= 60 ? 'hp-mid' : 'hp-low';
-      return `<div class="hist-card">
-        <div class="hist-pct ${cls}">${r.pct}%<span>${r.score}/${r.max_score}</span></div>
-        <div class="hist-info">
-          <div class="hist-name">${esc(r.section_title || 'Untitled')}</div>
-          <div class="hist-meta">${when} · ${mins}m ${secs}s</div>
+
+    // Group by topic: section_title is "TopicName_N" — extract base topic
+    const groups = {};
+    const groupOrder = [];
+    for (const r of data) {
+      // Extract topic: everything before the last _N suffix, or full title if no suffix
+      const base = (r.section_title || 'Untitled').replace(/_\d+$/, '') || 'Untitled';
+      if (!groups[base]) { groups[base] = []; groupOrder.push(base); }
+      groups[base].push(r);
+    }
+
+    list.innerHTML = groupOrder.map((topic, gi) => {
+      const attempts = groups[topic];
+      const best = Math.max(...attempts.map(a => a.pct));
+      const bestCls = best >= 85 ? 'hp-good' : best >= 60 ? 'hp-mid' : 'hp-low';
+      const rows = attempts.map(r => {
+        const d = new Date(r.created_at);
+        const when = d.toLocaleDateString('en-IN',{day:'numeric',month:'short'}) + ', ' +
+                     d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+        const mins = Math.floor((r.time_taken||0)/60), secs = (r.time_taken||0)%60;
+        const cls = r.pct>=85?'hp-good':r.pct>=60?'hp-mid':'hp-low';
+        const sectionLabel = r.section_title || 'Untitled';
+        return `<div class="hist-card">
+          <div class="hist-pct ${cls}">${r.pct}%<span>${r.score}/${r.max_score}</span></div>
+          <div class="hist-info">
+            <div class="hist-name">${esc(sectionLabel)}</div>
+            <div class="hist-meta">${when} · ${mins}m ${secs}s</div>
+          </div>
+          <div class="hist-actions">
+            <button class="part-btn" onclick="reviewAttempt('${r.id}')">Revise</button>
+            <button class="part-btn" style="border-color:var(--red);color:var(--red)" onclick="deleteAttempt('${r.id}',this)">Delete</button>
+          </div>
+        </div>`;
+      }).join('');
+
+      return `<div class="hist-topic-group">
+        <div class="hist-topic-name" onclick="toggleGroup(${gi})">
+          <span>📚 ${esc(topic)}</span>
+          <span><b>${attempts.length} attempt${attempts.length>1?'s':''} · best <span class="${bestCls}" style="font-weight:700">${best}%</span></b> <span id="arrow-${gi}" style="margin-left:8px">▼</span></span>
         </div>
-        <div class="hist-actions">
-          <button class="part-btn" onclick="reviewAttempt('${r.id}')">Revise</button>
-          <button class="part-btn" style="border-color:var(--red);color:var(--red)" onclick="deleteAttempt('${r.id}',this)">Delete</button>
-        </div>
+        <div class="hist-topic-body" id="group-body-${gi}">${rows}</div>
       </div>`;
     }).join('');
-  } catch (e) {
-    list.innerHTML = `<div class="hist-empty">Could not load history: ${esc(e.message || 'Supabase error')}.<br>Check the table exists and the keys in index.html are correct.</div>`;
+  } catch(e) {
+    list.innerHTML = `<div class="hist-empty">Could not load history: ${esc(e.message||'error')}.</div>`;
   }
+}
+
+function toggleGroup(gi) {
+  const body = document.getElementById(`group-body-${gi}`);
+  const arrow = document.getElementById(`arrow-${gi}`);
+  body.classList.toggle('collapsed');
+  arrow.textContent = body.classList.contains('collapsed') ? '▶' : '▼';
 }
 
 async function reviewAttempt(id) {
@@ -1831,6 +1916,9 @@ function newExam() {
   clearInterval(timerInt);
   document.getElementById('gen-btn').disabled = false;
   allSectionResults = {};
+  topicName = '';
+  const ti = document.getElementById('topic-name');
+  if (ti) ti.value = '';
   renderParts();
   show('s-setup');
 }
