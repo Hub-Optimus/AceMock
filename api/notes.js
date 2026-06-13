@@ -13,14 +13,16 @@ export default async function handler(req) {
   }
 
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 });
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405, headers: { 'Content-Type': 'application/json' },
+    });
   }
 
   try {
-    const { sources, topicTitle } = await req.json();
+    const { masaiText, transcriptText, topicTitle, masaiImages } = await req.json();
 
-    if (!sources || !sources.length) {
-      return new Response(JSON.stringify({ error: 'No source files provided' }), { status: 400 });
+    if (!transcriptText && !masaiText) {
+      return new Response(JSON.stringify({ error: 'Provide at least one input — Masai PDF or transcript' }), { status: 400 });
     }
 
     const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -28,28 +30,80 @@ export default async function handler(req) {
       return new Response(JSON.stringify({ error: 'ANTHROPIC_API_KEY not configured' }), { status: 500 });
     }
 
-    const systemPrompt = `You are an expert PM study notes creator for the BITSoM x Masai PM program.
+    const systemPrompt = `You are an expert PM study notes creator for the BITSoM × Masai "Product Management with Generative & Agentic AI" program. You produce structured, exam-ready notes that help students understand AND apply concepts — not just memorise them.
 
-Produce concise exam-ready notes. For every concept:
+For every concept in the material, produce notes in this exact format:
 
 ## [Concept Name]
-**What it is** — One sentence.
-**Why it's used** — Problem it solves.
-**Real-life examples** — 2 Indian company examples.
-**How it impacts PM decisions** — Specific PM use.
-**From the material** — Exact case study from sources.
-> **Exam angle:** What trap do students fall into?
+
+**What it is** — One clear sentence definition.
+
+**Why it's used** — The problem it solves. Why does this concept exist?
+
+**Real-life examples** — 2-3 examples from the real world BEYOND the lecture material. Use Indian companies where relevant.
+
+**How it impacts PM decisions** — Specifically how a PM uses this in their day-to-day work.
+
+**From the lecture/material** — The specific example or case study used in the source material.
+
+> **Exam angle:** What type of question will this become? What trap do students fall into? What should they watch for?
+
 ---
-Reproduce framework diagrams as ASCII. Output clean markdown only. Be concise — cover all concepts but keep each section tight.`;
 
+DIAGRAM RULE: If you see an image of a framework diagram (pyramid, funnel, matrix, hierarchy, flow), reproduce it as a clean ASCII text diagram. Example for Maslow pyramid:
+\`\`\`
+        ┌─────────────────┐
+        │ Self-actualisation │  ← Personal growth
+        ├──────────────────┤
+        │     Esteem        │  ← Status, achievement
+        ├──────────────────┤
+        │    Belonging      │  ← Community, connection
+        ├──────────────────┤
+        │     Safety        │  ← Security, stability
+        ├──────────────────┤
+        │  Physiological    │  ← Food, water, shelter
+        └──────────────────┘
+\`\`\`
+Do this for every framework diagram you encounter. Skip decorative images, logos, headers.
+
+RULES:
+- Cover EVERY concept from all sources — miss nothing
+- Merge overlapping content — don't repeat
+- Use Masai PDF for framework accuracy, transcript for real examples
+- Keep each section tight — no padding
+- End with a QUICK REVISION TABLE summarising all frameworks
+- Output clean markdown only`;
+
+    // Build message content — text + images
+    const contentParts = [];
+
+    // Add text content
     let textBlock = `Topic: ${topicTitle || 'PM Module'}\n\n`;
-    for (const src of sources) {
-      textBlock += `=== ${src.label} ===\n${src.text}\n\n`;
-    }
-    textBlock += `Produce ONE unified set of notes covering all concepts above.`;
+    if (masaiText) textBlock += `=== MASAI OFFICIAL MATERIAL ===\n${masaiText.slice(0, 7000)}\n\n`;
+    if (transcriptText) textBlock += `=== LECTURE TRANSCRIPT ===\n${transcriptText.slice(0, 7000)}\n\n`;
+    textBlock += `Generate comprehensive enhanced notes covering all concepts from the above material.`;
 
-    // Call Anthropic with streaming — Edge runtime keeps connection alive
-    const upstream = await fetch('https://api.anthropic.com/v1/messages', {
+    contentParts.push({ type: 'text', text: textBlock });
+
+    // Add images if provided (vision pass)
+    if (masaiImages && Array.isArray(masaiImages) && masaiImages.length > 0) {
+      contentParts.push({
+        type: 'text',
+        text: `\n\nThe following are page images from the Masai PDF. For each framework diagram (pyramid, funnel, matrix, hierarchy, model), reproduce it as an ASCII diagram in the notes. Skip decorative images.`
+      });
+      for (const img of masaiImages.slice(0, 8)) { // max 8 images
+        contentParts.push({
+          type: 'image',
+          source: {
+            type: 'base64',
+            media_type: img.mediaType || 'image/jpeg',
+            data: img.data
+          }
+        });
+      }
+    }
+
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'x-api-key': apiKey,
@@ -58,75 +112,29 @@ Reproduce framework diagrams as ASCII. Output clean markdown only. Be concise �
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
-        max_tokens: 3000,
-        stream: true,
+        max_tokens: 4096,
         system: systemPrompt,
-        messages: [{ role: 'user', content: textBlock }],
+        messages: [{ role: 'user', content: contentParts }],
       }),
     });
 
-    if (!upstream.ok) {
-      const err = await upstream.json().catch(() => ({}));
-      return new Response(
-        JSON.stringify({ error: err.error?.message || `API error ${upstream.status}` }),
-        { status: 502, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }
-      );
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      return new Response(JSON.stringify({ error: errData.error?.message || `API error ${res.status}` }), {
+        status: 502, headers: { 'Content-Type': 'application/json' },
+      });
     }
 
-    // TRUE streaming: pipe Anthropic SSE → transform to plain text chunks → browser
-    // Edge runtime supports this natively — no timeout because data flows continuously
-    const encoder = new TextEncoder();
-    let buffer = '';
+    const data = await res.json();
+    const notes = data.content?.[0]?.text || '';
 
-    const stream = new ReadableStream({
-      async start(controller) {
-        const reader = upstream.body.getReader();
-        const decoder = new TextDecoder();
-
-        try {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            const chunk = decoder.decode(value, { stream: true });
-            const lines = chunk.split('\n');
-
-            for (const line of lines) {
-              if (!line.startsWith('data: ')) continue;
-              const data = line.slice(6).trim();
-              if (data === '[DONE]') continue;
-              try {
-                const parsed = JSON.parse(data);
-                if (parsed.type === 'content_block_delta' && parsed.delta?.type === 'text_delta') {
-                  buffer += parsed.delta.text;
-                  // Send each text chunk directly to browser as it arrives
-                  controller.enqueue(encoder.encode(parsed.delta.text));
-                }
-              } catch(e) { /* skip malformed */ }
-            }
-          }
-        } finally {
-          controller.close();
-        }
-      }
-    });
-
-    // Return streaming plain-text response
-    // Frontend accumulates chunks and shows notes when stream ends
-    return new Response(stream, {
+    return new Response(JSON.stringify({ notes }), {
       status: 200,
-      headers: {
-        'Content-Type': 'text/plain; charset=utf-8',
-        'Access-Control-Allow-Origin': '*',
-        'X-Content-Type-Options': 'nosniff',
-        'Cache-Control': 'no-cache',
-      },
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
     });
-
   } catch (err) {
-    return new Response(
-      JSON.stringify({ error: err.message || 'Unexpected error' }),
-      { status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }
-    );
+    return new Response(JSON.stringify({ error: err.message || 'Unexpected error' }), {
+      status: 500, headers: { 'Content-Type': 'application/json' },
+    });
   }
 }
