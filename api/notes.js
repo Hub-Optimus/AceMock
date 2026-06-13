@@ -13,11 +13,12 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { sources, topicTitle, masaiImages } = req.json ? await req.json() : await new Promise((resolve, reject) => {
-      let body = '';
-      req.on('data', chunk => body += chunk);
-      req.on('end', () => { try { resolve(JSON.parse(body)); } catch(e) { reject(e); } });
+    const body = await new Promise((resolve, reject) => {
+      let raw = '';
+      req.on('data', chunk => raw += chunk);
+      req.on('end', () => { try { resolve(JSON.parse(raw)); } catch(e) { reject(e); } });
     });
+    const { sources, topicTitle, masaiImages } = body;
 
     if (!sources || !sources.length) {
       return res.status(400).json({ error: 'No source files provided' });
