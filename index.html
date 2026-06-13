@@ -916,6 +916,7 @@ function setStyle(s) {
 let currentSectionTitle = '';
 let viewingHistory = false;
 let allSectionResults = {};
+let preloadedSections = {}; // cache for pre-generated section questions
 
 // ── Supabase (attempt history) ───────────────────────
 // Paste your project values below. Get them from:
@@ -1413,20 +1414,14 @@ async function startGeneration(overrideText) {
   }, 2200);
 
   try {
-    // Multi-section: preload ALL questions upfront in 2 parallel calls
-    if (parts.length > 1 && activePart === -1) {
-      document.getElementById('load-title').textContent = 'Loading all sections upfront…';
-      await preloadAllSections(count, types);
-      activePart = 0;
-      currentSectionTitle = (topicName || parts[0].title || 'Section') + '_1';
-    }
-
     let qs;
     if (preloadedSections[activePart] && preloadedSections[activePart].length) {
+      // Use cached questions if available
       qs = preloadedSections[activePart];
     } else {
-      // Single section or fallback — 2 parallel calls
+      // Generate questions for this section
       qs = await callGroq(content, count, types);
+      if (activePart >= 0) preloadedSections[activePart] = qs; // cache for retry
     }
     clearInterval(stepInt);
     if (!qs || !qs.length) throw new Error('No questions returned');
@@ -2176,6 +2171,7 @@ function newExam() {
   clearInterval(timerInt);
   document.getElementById('gen-btn').disabled = false;
   allSectionResults = {};
+  preloadedSections = {};
   topicName = '';
   const ti = document.getElementById('topic-name');
   if (ti) ti.value = '';
