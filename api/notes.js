@@ -51,7 +51,7 @@ export default async function handler(req) {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + groqKey, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
+          model: 'openai/gpt-oss-120b',
           temperature: 0.4,
           max_tokens: 4096,
           messages: [{ role: 'user', content: groqPrompt }]
@@ -109,7 +109,7 @@ For framework diagrams reproduce as ASCII. End with a QUICK REVISION TABLE. Outp
       method: 'POST',
       headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
+        model: 'claude-sonnet-5',
         max_tokens: 4096,
         system: systemPrompt,
         messages: [{ role: 'user', content: contentParts }],

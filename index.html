@@ -540,10 +540,10 @@ a{color:var(--indigo);text-decoration:none}
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
       </div>
       <div class="upload-text">
-        <div class="upload-title">Upload a file — PDF, TXT, or DOCX</div>
-        <div class="upload-sub">Text is extracted in your browser and shown below — that's exactly what the AI reads</div>
+        <div class="upload-title">Upload a file — PDF, TXT, DOCX, or image</div>
+        <div class="upload-sub">Text is extracted and shown below — that's exactly what the AI reads</div>
       </div>
-      <input type="file" id="file-input" accept=".pdf,.txt,.docx,.doc" style="display:none" onchange="handleFile(event)">
+      <input type="file" id="file-input" accept=".pdf,.txt,.docx,.doc,.jpg,.jpeg,.png,.webp" style="display:none" onchange="handleFile(event)">
     </div>
     <div class="upload-status" id="upload-status"></div>
 
@@ -659,13 +659,13 @@ Works with any text — lecture notes, PDF content, chapter summaries. Minimum 3
         ondragleave="handleMultiDragLeave(event)"
         ondrop="handleMultiDrop(event)"
         onclick="document.getElementById('multi-file-input').click()">
-        <input type="file" id="multi-file-input" accept=".pdf,.txt,.docx,.doc"
+        <input type="file" id="multi-file-input" accept=".pdf,.txt,.docx,.doc,.jpg,.jpeg,.png,.webp"
           multiple style="display:none" onchange="handleMultiFileSelect(event)">
         <div class="mdz-icon">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
         </div>
         <div class="mdz-title">Drop files here or click to browse</div>
-        <div class="mdz-sub">PDF, TXT, DOCX · up to 5 files · pre-read, post-lecture, transcripts — all welcome</div>
+        <div class="mdz-sub">PDF, TXT, DOCX, image · up to 5 files · pre-read, post-lecture, transcripts — all welcome</div>
       </div>
 
       <!-- Uploaded files list -->
@@ -1392,9 +1392,12 @@ async function processFile(file) {
       const buf = await file.arrayBuffer();
       const result = await mammoth.extractRawText({ arrayBuffer: buf });
       text = result.value;
+    } else if (['jpg','jpeg','png','webp'].includes(ext)) {
+      status.textContent = 'Reading image (AI transcription)...';
+      text = await extractTextFromImage(file);
     } else {
       status.className = 'upload-status err';
-      status.textContent = 'Unsupported file type. Use PDF, TXT, or DOCX.';
+      status.textContent = 'Unsupported file type. Use PDF, TXT, DOCX, or an image.';
       return;
     }
     if (!text || text.trim().length < 100) {
@@ -2275,7 +2278,7 @@ async function processMultipleFiles(files) {
 
   for (const file of toProcess) {
     const ext = file.name.split('.').pop().toLowerCase();
-    if (!['pdf','txt','docx','doc'].includes(ext)) {
+    if (!['pdf','txt','docx','doc','jpg','jpeg','png','webp'].includes(ext)) {
       toast(`Skipped ${file.name} — unsupported format`);
       continue;
     }
@@ -2308,9 +2311,27 @@ async function processMultipleFiles(files) {
   renderFileChips();
 }
 
+async function extractTextFromImage(file) {
+  const buf = await file.arrayBuffer();
+  const bytes = new Uint8Array(buf);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  const base64 = btoa(binary);
+  const mediaType = file.type || 'image/jpeg';
+  const res = await fetch('/api/extract-image', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ imageBase64: base64, mediaType }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Image extraction failed');
+  return data.text || '';
+}
+
 async function extractTextFromFile(file) {
   const ext = file.name.split('.').pop().toLowerCase();
   if (ext === 'txt') return await file.text();
+  if (['jpg','jpeg','png','webp'].includes(ext)) return await extractTextFromImage(file);
   if (ext === 'pdf') {
     const pdfjsLib = window['pdfjs-dist/build/pdf'];
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
