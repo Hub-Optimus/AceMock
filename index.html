@@ -526,6 +526,7 @@ a{color:var(--indigo);text-decoration:none}
       <button class="tab-btn active" id="tab-quiz-btn" onclick="switchTab('quiz')">📝 Generate Quiz</button>
       <button class="tab-btn" id="tab-notes-btn" onclick="switchTab('notes')">📚 Generate Notes</button>
       <button class="tab-btn" id="tab-saved-btn" onclick="switchTab('saved')">💾 Saved Notes</button>
+      <button class="tab-btn" id="tab-cv-btn" onclick="switchTab('cv')">🧑‍💼 CV Interview Prep</button>
     </div>
 
     <!-- ══ QUIZ TAB ══ -->
@@ -757,6 +758,62 @@ Works with any text — lecture notes, PDF content, chapter summaries. Minimum 3
       <p class="setup-tagline">Your saved notes — click any to read, or feed directly into quiz generation.</p>
       <div id="saved-notes-list"><div class="hist-empty">Loading saved notes…</div></div>
     </div><!-- /tab-saved -->
+
+    <!-- ══ CV INTERVIEW PREP TAB ══ -->
+    <div class="tab-pane" id="tab-cv">
+      <p class="setup-tagline">Upload any CV — any field, any role — and get likely interview questions with model answers based on it.</p>
+
+      <div class="upload-zone" id="cv-upload-zone" onclick="document.getElementById('cv-file-input').click()" ondragover="handleCVDragOver(event)" ondragleave="handleCVDragLeave(event)" ondrop="handleCVDrop(event)">
+        <div class="upload-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        </div>
+        <div class="upload-text">
+          <div class="upload-title">Upload a CV — PDF, TXT, DOCX, or image</div>
+          <div class="upload-sub">Text is extracted and shown below — that's exactly what the AI reads</div>
+        </div>
+        <input type="file" id="cv-file-input" accept=".pdf,.txt,.docx,.doc,.jpg,.jpeg,.png,.webp" style="display:none" onchange="handleCVFile(event)">
+      </div>
+      <div class="upload-status" id="cv-upload-status"></div>
+
+      <div style="margin:14px 0">
+        <label style="font-size:11.5px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:6px">Target role (optional)</label>
+        <input id="cv-target-role" type="text" class="notes-topic-field" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:13.5px;outline:none" placeholder="e.g. Software Engineer, Product Manager, Business Analyst...">
+      </div>
+
+      <textarea id="cv-content"
+        style="width:100%;min-height:120px;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;color:var(--text);background:var(--bg2);outline:none;resize:vertical;line-height:1.6;font-family:inherit;margin-bottom:14px"
+        placeholder="Or paste CV text directly here..."
+        oninput="onCVTextChange()"></textarea>
+
+      <div style="margin-bottom:12px">
+        <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.3px;margin-bottom:6px">AI Model</div>
+        <div class="model-selector-row">
+          <button class="model-btn active-claude" id="cv-model-claude-btn" onclick="selectCVModel('claude')">
+            🧠 Claude Sonnet <span style="font-size:10px;padding:1px 5px;background:var(--violet-l);color:var(--violet);border-radius:4px;font-weight:700">Recommended</span>
+            <div style="font-size:10px;font-weight:400;color:var(--text3);margin-top:2px">Best quality · ~$0.05/session</div>
+          </button>
+          <button class="model-btn" id="cv-model-groq-btn" onclick="selectCVModel('groq')">
+            ⚡ Groq (Llama) <span style="font-size:10px;padding:1px 5px;background:var(--cyan-l);color:var(--cyan);border-radius:4px;font-weight:700">Free</span>
+            <div style="font-size:10px;font-weight:400;color:var(--text3);margin-top:2px">Good quality · $0 cost</div>
+          </button>
+        </div>
+      </div>
+
+      <button class="notes-gen-btn" id="cv-gen-btn" onclick="generateCVInterview()" disabled>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        Generate Interview Prep — add a CV above
+      </button>
+
+      <div class="notes-output" id="cv-output">
+        <div class="notes-toolbar">
+          <span class="notes-toolbar-title">Interview Prep</span>
+          <button class="btn-dl-notes" onclick="downloadCVPrep()">⬇ Download (.txt)</button>
+        </div>
+        <div class="notes-body" id="cv-body"></div>
+      </div>
+      <div id="cv-err"></div>
+    </div><!-- /tab-cv -->
+
 
   </div>
 </div>
@@ -2236,7 +2293,7 @@ let uploadedFiles = []; // [{name, text, type}]  type: 'masai'|'transcript'|'oth
 let visionEnabled = false;
 
 function switchTab(tab) {
-  ['quiz','notes','saved'].forEach(t => {
+  ['quiz','notes','saved','cv'].forEach(t => {
     document.getElementById(`tab-${t}`).classList.toggle('active', t === tab);
     document.getElementById(`tab-${t}-btn`).classList.toggle('active', t === tab);
   });
@@ -2599,6 +2656,123 @@ async function generateNotes() {
   btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg> Generate Notes';
 }
 
+
+// ── CV Interview Prep tab ──────────────────────────────
+let cvExtractedText = '';
+let cvModel = 'claude';
+
+function selectCVModel(model) {
+  cvModel = model;
+  document.getElementById('cv-model-claude-btn').className = 'model-btn' + (model === 'claude' ? ' active-claude' : '');
+  document.getElementById('cv-model-groq-btn').className = 'model-btn' + (model === 'groq' ? ' active-groq' : '');
+}
+
+function handleCVDragOver(e) {
+  e.preventDefault();
+  document.getElementById('cv-upload-zone').classList.add('drag-over');
+}
+function handleCVDragLeave(e) {
+  document.getElementById('cv-upload-zone').classList.remove('drag-over');
+}
+function handleCVDrop(e) {
+  e.preventDefault();
+  document.getElementById('cv-upload-zone').classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) processCVFile(file);
+}
+function handleCVFile(e) {
+  const file = e.target.files[0];
+  if (file) processCVFile(file);
+}
+
+async function processCVFile(file) {
+  const status = document.getElementById('cv-upload-status');
+  status.className = 'upload-status ok';
+  status.textContent = 'Reading file...';
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (!['pdf','txt','docx','doc','jpg','jpeg','png','webp'].includes(ext)) {
+    status.className = 'upload-status err';
+    status.textContent = 'Unsupported file type. Use PDF, TXT, DOCX, or an image.';
+    return;
+  }
+  if (['jpg','jpeg','png','webp'].includes(ext)) status.textContent = 'Reading image (AI transcription)...';
+  try {
+    const text = await extractTextFromFile(file);
+    if (!text || text.trim().length < 50) {
+      status.className = 'upload-status err';
+      status.textContent = 'Could not extract text from this file. Try pasting the CV text directly.';
+      return;
+    }
+    cvExtractedText = text.trim();
+    document.getElementById('cv-content').value = cvExtractedText;
+    onCVTextChange();
+    status.className = 'upload-status ok';
+    status.textContent = `✓ ${file.name} — text extracted below. Edit if needed before generating.`;
+  } catch(e) {
+    status.className = 'upload-status err';
+    status.textContent = `Could not read file: ${e.message}. Try pasting directly.`;
+  }
+}
+
+function onCVTextChange() {
+  const val = document.getElementById('cv-content').value.trim();
+  const btn = document.getElementById('cv-gen-btn');
+  if (val.length > 50) {
+    btn.disabled = false;
+    btn.lastChild.textContent = ' Generate Interview Prep';
+  } else {
+    btn.disabled = true;
+    btn.lastChild.textContent = ' Generate Interview Prep — add a CV above';
+  }
+}
+
+let cvPrepText = '';
+
+async function generateCVInterview() {
+  const cvText = document.getElementById('cv-content').value.trim();
+  if (!cvText || cvText.length < 50) {
+    document.getElementById('cv-err').innerHTML = '<div class="err-box">Upload or paste a CV first — at least a few lines of real content.</div>';
+    return;
+  }
+  document.getElementById('cv-err').innerHTML = '';
+  const targetRole = document.getElementById('cv-target-role').value.trim();
+  const btn = document.getElementById('cv-gen-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spin-ring" style="width:20px;height:20px;border-width:2.5px;margin:0"></div> Generating interview prep…';
+
+  try {
+    const res = await fetch('/api/cv-interview', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cvText, targetRole, useGroq: cvModel === 'groq' })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `API error ${res.status}`);
+    }
+    const data = await res.json();
+    cvPrepText = data.text || '';
+    if (!cvPrepText) throw new Error('No interview prep returned');
+    document.getElementById('cv-body').innerHTML = renderMarkdown(cvPrepText);
+    document.getElementById('cv-output').classList.add('show');
+    toast('✓ Interview prep generated');
+  } catch(err) {
+    document.getElementById('cv-err').innerHTML = `<div class="err-box">Generation failed: ${err.message}</div>`;
+  }
+  btn.disabled = false;
+  btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg> Generate Interview Prep';
+}
+
+function downloadCVPrep() {
+  if (!cvPrepText) { toast('Generate interview prep first'); return; }
+  const blob = new Blob([cvPrepText], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'interview-prep.txt';
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 async function deleteSavedNote(id) {
   if (!confirm('Delete this note? Cannot be undone.')) return;
