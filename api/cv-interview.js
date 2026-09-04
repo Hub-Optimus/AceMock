@@ -19,8 +19,8 @@ export default async function handler(req) {
 
     const systemPrompt = `You are an expert interview coach. Read the candidate's CV/resume and generate a full interview question bank personalized to it — this works for ANY field or industry (software, finance, marketing, design, operations, sales, etc.), not just one domain. Infer the candidate's field, seniority, and focus areas entirely from the CV content.
 
-Output ONLY a JSON array (no markdown, no code fences, no commentary before or after) of objects shaped like:
-{"category": "Technical", "question": "...", "answer": "..."}
+Respond with a JSON object only, shaped exactly like:
+{"questions": [{"category": "Technical", "question": "...", "answer": "..."}, ...]}
 
 Scale the TOTAL number of questions to how much the CV actually contains — do not target a fixed count. A short, fresher-level CV with few projects might only support 15-20 solid questions. A detailed CV with many roles, projects, and skills can easily support 30-50+. Never pad with generic or repetitive questions just to hit a number — every question must map to something specific and real in the CV (a named skill, tool, project, role, or achievement).
 
@@ -30,7 +30,7 @@ Categories:
 - "Gap" — 1-3 questions about a career gap, career switch, or a skill commonly expected in this field but missing from the CV. If nothing stands out, ask 1-2 reasonable "why this transition / why this next step" questions instead. "answer" is suggested framing for an honest, confident response.
 - "AskInterviewer" — 3-5 thoughtful questions the candidate can ask the interviewer, informed by their seniority and field. "answer" here is a one-sentence note on why this question is smart to ask (not a literal answer from the candidate).
 
-Rules: Never invent specific facts (numbers, company names, project outcomes) that aren't in the CV — where a model answer needs a specific example the CV doesn't provide, write "[reference a specific project/metric here]" instead of making one up. Keep each "answer" to 2-5 sentences, concrete and usable, not generic filler.`;
+Rules: Never invent specific facts (numbers, company names, project outcomes) that aren't in the CV — where a model answer needs a specific example the CV doesn't provide, write "[reference a specific project/metric here]" instead of making one up. Keep each "answer" to 2-5 sentences, concrete and usable, not generic filler. Output valid JSON only — no markdown, no code fences, no commentary.`;
 
     const roleNote = targetRole && targetRole.trim()
       ? `\n\nThe candidate is targeting this role: ${targetRole.trim()}. Tailor the Technical questions and framing toward that target role specifically.`
@@ -51,6 +51,7 @@ Rules: Never invent specific facts (numbers, company names, project outcomes) th
           model: 'openai/gpt-oss-120b',
           temperature: 0.4,
           max_tokens: 8000,
+          response_format: { type: 'json_object' },
           messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }],
         }),
       });
@@ -65,19 +66,19 @@ Rules: Never invent specific facts (numbers, company names, project outcomes) th
       });
     }
 
-    // ── CLAUDE ROUTE (paid, better quality) ────
-    const apiKey = process.env.ANTHROPIC_API_KEY;
+    // ── OPENAI ROUTE (paid, better quality) ────
+    const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
-      return new Response(JSON.stringify({ error: 'ANTHROPIC_API_KEY not configured' }), { status: 500 });
+      return new Response(JSON.stringify({ error: 'OPENAI_API_KEY not configured' }), { status: 500 });
     }
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
-      headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
+      headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-5',
-        max_tokens: 8000,
-        system: systemPrompt,
-        messages: [{ role: 'user', content: userPrompt }],
+        model: 'gpt-5-mini',
+        max_completion_tokens: 8000,
+        response_format: { type: 'json_object' },
+        messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }],
       }),
     });
     if (!res.ok) {
@@ -85,7 +86,7 @@ Rules: Never invent specific facts (numbers, company names, project outcomes) th
       return new Response(JSON.stringify({ error: e.error?.message || `API error ${res.status}` }), { status: 502 });
     }
     const data = await res.json();
-    const text = data.content?.[0]?.text || '';
+    const text = data.choices?.[0]?.message?.content || '';
     return new Response(JSON.stringify({ text }), {
       status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
     });

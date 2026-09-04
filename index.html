@@ -788,8 +788,8 @@ Works with any text — lecture notes, PDF content, chapter summaries. Minimum 3
       <div style="margin-bottom:12px">
         <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.3px;margin-bottom:6px">AI Model</div>
         <div class="model-selector-row">
-          <button class="model-btn active-claude" id="cv-model-claude-btn" onclick="selectCVModel('claude')">
-            🧠 Claude Sonnet <span style="font-size:10px;padding:1px 5px;background:var(--violet-l);color:var(--violet);border-radius:4px;font-weight:700">Recommended</span>
+          <button class="model-btn active-claude" id="cv-model-openai-btn" onclick="selectCVModel('openai')">
+            🧠 OpenAI GPT-5 <span style="font-size:10px;padding:1px 5px;background:var(--violet-l);color:var(--violet);border-radius:4px;font-weight:700">Recommended</span>
             <div style="font-size:10px;font-weight:400;color:var(--text3);margin-top:2px">Best quality · ~$0.05/session</div>
           </button>
           <button class="model-btn" id="cv-model-groq-btn" onclick="selectCVModel('groq')">
@@ -810,17 +810,22 @@ Works with any text — lecture notes, PDF content, chapter summaries. Minimum 3
           <button class="btn-dl-notes" onclick="downloadCVPrep()">⬇ Download (.txt)</button>
         </div>
 
-        <div id="cv-qgrid" style="display:flex;flex-wrap:wrap;gap:7px;padding:14px 18px 0"></div>
+        <div style="display:flex">
+          <div style="width:190px;min-width:190px;padding:16px;border-right:1px solid var(--border)">
+            <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.3px;margin-bottom:10px">Questions</div>
+            <div id="cv-qgrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px"></div>
+          </div>
 
-        <div style="padding:18px">
-          <span id="cv-cat-badge" style="display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;background:var(--indigo-l);color:var(--indigo);text-transform:uppercase;letter-spacing:.3px;margin-bottom:10px"></span>
-          <div id="cv-question-text" style="font-size:15px;font-weight:600;color:var(--text);line-height:1.5;margin-bottom:14px"></div>
-          <button class="btn-use-notes" id="cv-show-answer-btn" onclick="toggleCVAnswer()">Show answer</button>
-          <div id="cv-answer-box" style="display:none;margin-top:12px;padding:14px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;font-size:13.5px;color:var(--text2);line-height:1.6"></div>
+          <div style="flex:1;padding:20px;min-width:0">
+            <span id="cv-cat-badge" style="display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;background:var(--indigo-l);color:var(--indigo);text-transform:uppercase;letter-spacing:.3px;margin-bottom:10px"></span>
+            <div id="cv-question-text" style="font-size:15px;font-weight:600;color:var(--text);line-height:1.5;margin-bottom:14px"></div>
+            <button class="btn-use-notes" id="cv-show-answer-btn" onclick="toggleCVAnswer()">Show answer</button>
+            <div id="cv-answer-box" style="display:none;margin-top:12px;padding:14px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;font-size:13.5px;color:var(--text2);line-height:1.6"></div>
 
-          <div style="display:flex;justify-content:space-between;margin-top:22px">
-            <button class="btn-dl-notes" onclick="cvPrev()">← Previous</button>
-            <button class="btn-dl-notes" onclick="cvNext()">Next →</button>
+            <div style="display:flex;justify-content:space-between;margin-top:22px">
+              <button class="btn-dl-notes" onclick="cvPrev()">← Previous</button>
+              <button class="btn-dl-notes" onclick="cvNext()">Next →</button>
+            </div>
           </div>
         </div>
       </div>
@@ -2672,11 +2677,11 @@ async function generateNotes() {
 
 // ── CV Interview Prep tab ──────────────────────────────
 let cvExtractedText = '';
-let cvModel = 'claude';
+let cvModel = 'openai';
 
 function selectCVModel(model) {
   cvModel = model;
-  document.getElementById('cv-model-claude-btn').className = 'model-btn' + (model === 'claude' ? ' active-claude' : '');
+  document.getElementById('cv-model-openai-btn').className = 'model-btn' + (model === 'openai' ? ' active-claude' : '');
   document.getElementById('cv-model-groq-btn').className = 'model-btn' + (model === 'groq' ? ' active-groq' : '');
 }
 
@@ -2768,10 +2773,17 @@ async function generateCVInterview() {
     }
     const data = await res.json();
     let raw = (data.text || '').replace(/```json|```/g, '').trim();
-    const start = raw.indexOf('[');
-    const end = raw.lastIndexOf(']') + 1;
-    if (start === -1 || end === 0) throw new Error('Invalid response format');
-    const parsed = JSON.parse(raw.substring(start, end));
+    let parsed;
+    try {
+      const obj = JSON.parse(raw);
+      parsed = Array.isArray(obj) ? obj : obj.questions;
+    } catch(e) {
+      // Fallback: extract the first [...] array from free-form text
+      const start = raw.indexOf('[');
+      const end = raw.lastIndexOf(']') + 1;
+      if (start === -1 || end === 0) throw new Error('Invalid response format');
+      parsed = JSON.parse(raw.substring(start, end));
+    }
     if (!Array.isArray(parsed) || parsed.length === 0) throw new Error('No questions returned');
 
     cvQuestions = parsed;
@@ -2802,7 +2814,9 @@ function renderCVQuestion() {
   document.getElementById('cv-question-text').textContent = q.question || '';
   document.getElementById('cv-answer-box').style.display = 'none';
   document.getElementById('cv-answer-box').textContent = q.answer || '';
-  document.getElementById('cv-show-answer-btn').textContent = 'Show answer';
+  const showBtn = document.getElementById('cv-show-answer-btn');
+  showBtn.textContent = 'Show answer';
+  showBtn.disabled = false;
   cvQuestions.forEach((_, i) => {
     const dot = document.getElementById(`cv-dot-${i}`);
     if (!dot) return;
@@ -2816,8 +2830,18 @@ function toggleCVAnswer() {
   const box = document.getElementById('cv-answer-box');
   const btn = document.getElementById('cv-show-answer-btn');
   const showing = box.style.display !== 'none';
-  box.style.display = showing ? 'none' : 'block';
-  btn.textContent = showing ? 'Show answer' : 'Hide answer';
+  if (showing) {
+    box.style.display = 'none';
+    btn.textContent = 'Show answer';
+    return;
+  }
+  btn.textContent = 'Thinking…';
+  btn.disabled = true;
+  setTimeout(() => {
+    box.style.display = 'block';
+    btn.textContent = 'Hide answer';
+    btn.disabled = false;
+  }, 2000);
 }
 
 function cvGoTo(i) {
