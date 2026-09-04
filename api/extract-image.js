@@ -17,25 +17,30 @@ export default async function handler(req) {
       return new Response(JSON.stringify({ error: 'Missing imageBase64' }), { status: 400 });
     }
 
-    const apiKey = process.env.ANTHROPIC_API_KEY;
+    const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
-      return new Response(JSON.stringify({ error: 'ANTHROPIC_API_KEY not configured' }), { status: 500 });
+      return new Response(JSON.stringify({ error: 'OPENAI_API_KEY not configured' }), { status: 500 });
     }
 
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
-      headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
+      headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
+        model: 'gpt-5-mini',
         max_tokens: 4096,
-        system: 'You transcribe study material from images for an exam-prep app. Read the image and output ONLY the content, in clean plain text — preserve headings, bullet points, numbered lists, and tables (pipe-separated). Do not add commentary, labels, or a preamble. If the image is a diagram/chart with little or no text, describe what it shows in 3-4 factual sentences instead.',
-        messages: [{
-          role: 'user',
-          content: [
-            { type: 'image', source: { type: 'base64', media_type: mediaType || 'image/jpeg', data: imageBase64 } },
-            { type: 'text', text: 'Transcribe this image.' },
-          ],
-        }],
+        messages: [
+          {
+            role: 'system',
+            content: 'You transcribe study material from images for an exam-prep app. Read the image and output ONLY the content, in clean plain text — preserve headings, bullet points, numbered lists, and tables (pipe-separated). Do not add commentary, labels, or a preamble. If the image is a diagram/chart with little or no text, describe what it shows in 3-4 factual sentences instead.',
+          },
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: 'Transcribe this image.' },
+              { type: 'image_url', image_url: { url: `data:${mediaType || 'image/jpeg'};base64,${imageBase64}` } },
+            ],
+          },
+        ],
       }),
     });
 
@@ -44,7 +49,7 @@ export default async function handler(req) {
       return new Response(JSON.stringify({ error: e.error?.message || `API error ${res.status}` }), { status: 502 });
     }
     const data = await res.json();
-    return new Response(JSON.stringify({ text: data.content?.[0]?.text || '' }), {
+    return new Response(JSON.stringify({ text: data.choices?.[0]?.message?.content || '' }), {
       status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
     });
 
