@@ -27,7 +27,7 @@ export default async function handler(req) {
       headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: 'gpt-5-mini',
-        max_tokens: 4096,
+        max_completion_tokens: 4096,
         messages: [
           {
             role: 'system',
