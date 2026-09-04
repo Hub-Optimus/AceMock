@@ -1,4 +1,4 @@
-export const config = { runtime: 'edge' };
+export const maxDuration = 60;
 
 export default async function handler(req) {
   if (req.method === 'OPTIONS') {
@@ -77,6 +77,7 @@ Rules: Never invent specific facts (numbers, company names, project outcomes) th
       body: JSON.stringify({
         model: 'gpt-5-mini',
         max_completion_tokens: 8000,
+        reasoning_effort: 'low',
         response_format: { type: 'json_object' },
         messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }],
       }),
