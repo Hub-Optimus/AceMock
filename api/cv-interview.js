@@ -17,32 +17,26 @@ export default async function handler(req) {
       return new Response(JSON.stringify({ error: 'CV text is too short or missing' }), { status: 400 });
     }
 
-    const systemPrompt = `You are an expert interview coach. Read the candidate's CV/resume and produce a structured interview-prep guide personalized to it — this works for ANY field or industry (software, finance, marketing, design, operations, sales, etc.), not just one domain. Infer the candidate's field, seniority, and focus areas entirely from the CV content.
+    const systemPrompt = `You are an expert interview coach. Read the candidate's CV/resume and generate a full interview question bank personalized to it — this works for ANY field or industry (software, finance, marketing, design, operations, sales, etc.), not just one domain. Infer the candidate's field, seniority, and focus areas entirely from the CV content.
 
-Produce the guide in this exact structure:
+Output ONLY a JSON array (no markdown, no code fences, no commentary before or after) of objects shaped like:
+{"category": "Technical", "question": "...", "answer": "..."}
 
-## About This Candidate
-2-3 sentences: their field, seniority level, and main strengths, based only on what's in the CV.
+Scale the TOTAL number of questions to how much the CV actually contains — do not target a fixed count. A short, fresher-level CV with few projects might only support 15-20 solid questions. A detailed CV with many roles, projects, and skills can easily support 30-50+. Never pad with generic or repetitive questions just to hit a number — every question must map to something specific and real in the CV (a named skill, tool, project, role, or achievement).
 
-## Likely Technical / Domain Questions
-6-8 questions specific to the tools, skills, projects, or domain knowledge listed on the CV. After each question, give a model answer that references specific details from the CV (project names, tools, achievements, metrics).
+Categories:
+- "Technical" — one or more questions per distinct skill, tool, technology, or project listed on the CV (so a CV listing 12 skills/projects should yield roughly 12+ Technical questions). "answer" is a model answer referencing specific details from the CV.
+- "Behavioral" — 5-8 common behavioral questions (teamwork, conflict, leadership, failure, growth). "answer" is a suggested answer using the STAR method, drawing on real experiences from the CV where possible.
+- "Gap" — 1-3 questions about a career gap, career switch, or a skill commonly expected in this field but missing from the CV. If nothing stands out, ask 1-2 reasonable "why this transition / why this next step" questions instead. "answer" is suggested framing for an honest, confident response.
+- "AskInterviewer" — 3-5 thoughtful questions the candidate can ask the interviewer, informed by their seniority and field. "answer" here is a one-sentence note on why this question is smart to ask (not a literal answer from the candidate).
 
-## Behavioral Questions
-5-6 common behavioral questions (teamwork, conflict, leadership, failure, growth). For each, give a suggested answer using the STAR method, drawing on real experiences from the CV where possible.
-
-## Questions About Gaps or Weak Points
-If the CV shows a career gap, career switch, or a skill commonly expected in this field but missing from the CV, list 2-3 questions the candidate should prepare for, with suggested framing for honest, confident answers. If nothing stands out, note that briefly instead.
-
-## Smart Questions to Ask the Interviewer
-4-5 thoughtful questions the candidate can ask back, informed by their seniority and field.
-
-Rules: Output clean markdown only, no preamble. Never invent specific facts (numbers, company names, project outcomes) that aren't in the CV — where a model answer needs a specific example the CV doesn't provide, write "[reference a specific project/metric here]" instead of making one up.`;
+Rules: Never invent specific facts (numbers, company names, project outcomes) that aren't in the CV — where a model answer needs a specific example the CV doesn't provide, write "[reference a specific project/metric here]" instead of making one up. Keep each "answer" to 2-5 sentences, concrete and usable, not generic filler.`;
 
     const roleNote = targetRole && targetRole.trim()
-      ? `\n\nThe candidate is targeting this role: ${targetRole.trim()}. Tailor the technical/domain questions and framing toward that target role specifically.`
+      ? `\n\nThe candidate is targeting this role: ${targetRole.trim()}. Tailor the Technical questions and framing toward that target role specifically.`
       : '';
 
-    const userPrompt = `CV / RESUME CONTENT:\n${cvText.trim()}${roleNote}\n\nGenerate the interview-prep guide now.`;
+    const userPrompt = `CV / RESUME CONTENT:\n${cvText.trim()}${roleNote}\n\nGenerate the JSON question bank now. Base the total count on how much this specific CV supports, following the category guidance exactly — do not aim for a round number.`;
 
     // ── GROQ ROUTE (free) ──────────────────────
     if (useGroq) {
@@ -56,7 +50,7 @@ Rules: Output clean markdown only, no preamble. Never invent specific facts (num
         body: JSON.stringify({
           model: 'openai/gpt-oss-120b',
           temperature: 0.4,
-          max_tokens: 4096,
+          max_tokens: 8000,
           messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }],
         }),
       });
@@ -81,7 +75,7 @@ Rules: Output clean markdown only, no preamble. Never invent specific facts (num
       headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: 'claude-sonnet-5',
-        max_tokens: 4096,
+        max_tokens: 8000,
         system: systemPrompt,
         messages: [{ role: 'user', content: userPrompt }],
       }),

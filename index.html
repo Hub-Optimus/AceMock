@@ -806,10 +806,23 @@ Works with any text — lecture notes, PDF content, chapter summaries. Minimum 3
 
       <div class="notes-output" id="cv-output">
         <div class="notes-toolbar">
-          <span class="notes-toolbar-title">Interview Prep</span>
+          <span class="notes-toolbar-title" id="cv-progress-label">Interview Question Bank</span>
           <button class="btn-dl-notes" onclick="downloadCVPrep()">⬇ Download (.txt)</button>
         </div>
-        <div class="notes-body" id="cv-body"></div>
+
+        <div id="cv-qgrid" style="display:flex;flex-wrap:wrap;gap:7px;padding:14px 18px 0"></div>
+
+        <div style="padding:18px">
+          <span id="cv-cat-badge" style="display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;background:var(--indigo-l);color:var(--indigo);text-transform:uppercase;letter-spacing:.3px;margin-bottom:10px"></span>
+          <div id="cv-question-text" style="font-size:15px;font-weight:600;color:var(--text);line-height:1.5;margin-bottom:14px"></div>
+          <button class="btn-use-notes" id="cv-show-answer-btn" onclick="toggleCVAnswer()">Show answer</button>
+          <div id="cv-answer-box" style="display:none;margin-top:12px;padding:14px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;font-size:13.5px;color:var(--text2);line-height:1.6"></div>
+
+          <div style="display:flex;justify-content:space-between;margin-top:22px">
+            <button class="btn-dl-notes" onclick="cvPrev()">← Previous</button>
+            <button class="btn-dl-notes" onclick="cvNext()">Next →</button>
+          </div>
+        </div>
       </div>
       <div id="cv-err"></div>
     </div><!-- /tab-cv -->
@@ -2726,7 +2739,10 @@ function onCVTextChange() {
   }
 }
 
-let cvPrepText = '';
+let cvQuestions = [];
+let cvQIndex = 0;
+
+const CV_CAT_LABELS = { Technical: 'Technical', Behavioral: 'Behavioral', Gap: 'Gaps & Weak Points', AskInterviewer: 'Ask the Interviewer' };
 
 async function generateCVInterview() {
   const cvText = document.getElementById('cv-content').value.trim();
@@ -2738,7 +2754,7 @@ async function generateCVInterview() {
   const targetRole = document.getElementById('cv-target-role').value.trim();
   const btn = document.getElementById('cv-gen-btn');
   btn.disabled = true;
-  btn.innerHTML = '<div class="spin-ring" style="width:20px;height:20px;border-width:2.5px;margin:0"></div> Generating interview prep…';
+  btn.innerHTML = '<div class="spin-ring" style="width:20px;height:20px;border-width:2.5px;margin:0"></div> Generating question bank…';
 
   try {
     const res = await fetch('/api/cv-interview', {
@@ -2751,11 +2767,19 @@ async function generateCVInterview() {
       throw new Error(err.error || `API error ${res.status}`);
     }
     const data = await res.json();
-    cvPrepText = data.text || '';
-    if (!cvPrepText) throw new Error('No interview prep returned');
-    document.getElementById('cv-body').innerHTML = renderMarkdown(cvPrepText);
+    let raw = (data.text || '').replace(/```json|```/g, '').trim();
+    const start = raw.indexOf('[');
+    const end = raw.lastIndexOf(']') + 1;
+    if (start === -1 || end === 0) throw new Error('Invalid response format');
+    const parsed = JSON.parse(raw.substring(start, end));
+    if (!Array.isArray(parsed) || parsed.length === 0) throw new Error('No questions returned');
+
+    cvQuestions = parsed;
+    cvQIndex = 0;
+    buildCVGrid();
+    renderCVQuestion();
     document.getElementById('cv-output').classList.add('show');
-    toast('✓ Interview prep generated');
+    toast(`✓ ${cvQuestions.length} interview questions generated`);
   } catch(err) {
     document.getElementById('cv-err').innerHTML = `<div class="err-box">Generation failed: ${err.message}</div>`;
   }
@@ -2763,9 +2787,53 @@ async function generateCVInterview() {
   btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg> Generate Interview Prep';
 }
 
+function buildCVGrid() {
+  const grid = document.getElementById('cv-qgrid');
+  grid.innerHTML = cvQuestions.map((q, i) => `
+    <button onclick="cvGoTo(${i})" id="cv-dot-${i}" style="width:32px;height:32px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);font-size:12px;font-weight:600;color:var(--text2);cursor:pointer">${i + 1}</button>
+  `).join('');
+}
+
+function renderCVQuestion() {
+  const q = cvQuestions[cvQIndex];
+  if (!q) return;
+  document.getElementById('cv-progress-label').textContent = `Question ${cvQIndex + 1} of ${cvQuestions.length}`;
+  document.getElementById('cv-cat-badge').textContent = CV_CAT_LABELS[q.category] || q.category || 'Question';
+  document.getElementById('cv-question-text').textContent = q.question || '';
+  document.getElementById('cv-answer-box').style.display = 'none';
+  document.getElementById('cv-answer-box').textContent = q.answer || '';
+  document.getElementById('cv-show-answer-btn').textContent = 'Show answer';
+  cvQuestions.forEach((_, i) => {
+    const dot = document.getElementById(`cv-dot-${i}`);
+    if (!dot) return;
+    dot.style.borderColor = i === cvQIndex ? 'var(--indigo)' : 'var(--border)';
+    dot.style.background = i === cvQIndex ? 'var(--indigo-l)' : 'var(--bg)';
+    dot.style.color = i === cvQIndex ? 'var(--indigo)' : 'var(--text2)';
+  });
+}
+
+function toggleCVAnswer() {
+  const box = document.getElementById('cv-answer-box');
+  const btn = document.getElementById('cv-show-answer-btn');
+  const showing = box.style.display !== 'none';
+  box.style.display = showing ? 'none' : 'block';
+  btn.textContent = showing ? 'Show answer' : 'Hide answer';
+}
+
+function cvGoTo(i) {
+  if (i < 0 || i >= cvQuestions.length) return;
+  cvQIndex = i;
+  renderCVQuestion();
+}
+function cvNext() { cvGoTo(cvQIndex + 1); }
+function cvPrev() { cvGoTo(cvQIndex - 1); }
+
 function downloadCVPrep() {
-  if (!cvPrepText) { toast('Generate interview prep first'); return; }
-  const blob = new Blob([cvPrepText], { type: 'text/plain' });
+  if (!cvQuestions.length) { toast('Generate interview prep first'); return; }
+  const text = cvQuestions.map((q, i) =>
+    `${i + 1}. [${CV_CAT_LABELS[q.category] || q.category}] ${q.question}\n${q.answer}\n`
+  ).join('\n');
+  const blob = new Blob([text], { type: 'text/plain' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
