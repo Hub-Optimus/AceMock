@@ -1694,7 +1694,14 @@ ${sampleContent(content)}`;
   const start = raw.indexOf('[');
   const end   = raw.lastIndexOf(']') + 1;
   if (start === -1 || end === 0) throw new Error('Invalid response format');
-  return parseJSONLenient(raw.substring(start, end));
+  const jsonSlice = raw.substring(start, end);
+  try {
+    return parseJSONLenient(jsonSlice);
+  } catch (parseErr) {
+    const pos = parseInt((parseErr.message.match(/position (\d+)/) || [])[1], 10);
+    const around = isNaN(pos) ? jsonSlice.slice(0, 200) : jsonSlice.slice(Math.max(0, pos - 100), pos + 100);
+    throw new Error(`${parseErr.message} — near: ...${around}...`);
+  }
 }
 
 // ── Timer ─────────────────────────────────────────────
@@ -2817,7 +2824,14 @@ async function generateCVInterview() {
       const start = raw.indexOf('[');
       const end = raw.lastIndexOf(']') + 1;
       if (start === -1 || end === 0) throw new Error('Invalid response format');
-      parsed = parseJSONLenient(raw.substring(start, end));
+      try {
+        parsed = parseJSONLenient(raw.substring(start, end));
+      } catch (parseErr) {
+        const pos = parseInt((parseErr.message.match(/position (\d+)/) || [])[1], 10);
+        const slice = raw.substring(start, end);
+        const around = isNaN(pos) ? slice.slice(0, 200) : slice.slice(Math.max(0, pos - 100), pos + 100);
+        throw new Error(`${parseErr.message} — near: ...${around}...`);
+      }
     }
     if (!Array.isArray(parsed) || parsed.length === 0) throw new Error('No questions returned');
 
