@@ -1639,14 +1639,19 @@ async function callGroq(content, count, types) {
 
   const offlinePrompt = `You are a senior exam-paper setter replicating the BITSoM x Masai offline exam exactly.
 
-Return ONLY a JSON array. No markdown fences, no preamble.
+Return ONLY a JSON object. No markdown fences, no preamble.
 
 JSON format:
-[
+{"questions":[
   {"id":1,"type":"MCQ","question":"...","options":["A. ...","B. ...","C. ...","D. ..."],"correct":2,"explanation":"..."},
   {"id":2,"type":"MSQ","question":"...","options":["A. ...","B. ...","C. ...","D. ..."],"correct":[0,2],"explanation":"..."},
   {"id":3,"type":"NAT","question":"...","correct":"3000","explanation":"Step 1: ..."}
-]
+]}
+
+CRITICAL JSON VALIDITY RULES — output must parse with a strict JSON parser:
+- If any question, option, or explanation text needs to quote someone or reference a literal quote, escape it as \\" — never leave a bare " inside a string.
+- Never put a raw line break inside a string value — use a space instead.
+- Every object in the array needs a comma after it except the last one; double-check every "}" and "]" is followed by a comma before the next field or item.
 
 MANDATORY RULES:
 1. SCENARIO-FIRST: Every question opens with a named Indian professional in a real business situation. The question tests APPLY not RECALL.
@@ -1660,14 +1665,19 @@ MANDATORY RULES:
 
   const standardPrompt = `You are an expert exam question writer for a Product Management with Generative and Agentic AI certification.
 
-Return ONLY a JSON array. No markdown, no preamble.
+Return ONLY a JSON object. No markdown, no preamble.
 
 JSON format:
-[
+{"questions":[
   {"id":1,"type":"MCQ","question":"...","options":["A. ...","B. ...","C. ...","D. ..."],"correct":2,"explanation":"..."},
   {"id":2,"type":"MSQ","question":"...","options":["A. ...","B. ...","C. ...","D. ..."],"correct":[0,2],"explanation":"..."},
   {"id":3,"type":"NAT","question":"...","correct":"3000","explanation":"..."}
-]
+]}
+
+CRITICAL JSON VALIDITY RULES — output must parse with a strict JSON parser:
+- If any question, option, or explanation text needs to quote someone or reference a literal quote, escape it as \\" — never leave a bare " inside a string.
+- Never put a raw line break inside a string value — use a space instead.
+- Every object in the array needs a comma after it except the last one; double-check every "}" and "]" is followed by a comma before the next field or item.
 
 Rules:
 1. Open most questions with a scenario using a named person.
@@ -1704,13 +1714,21 @@ ${sampleContent(content)}`;
 
   const data = await res.json();
   let raw = (data.text || '').replace(/```json|```/g, '').trim();
-  // Find JSON array
-  const start = raw.indexOf('[');
-  const end   = raw.lastIndexOf(']') + 1;
-  if (start === -1 || end === 0) throw new Error('Invalid response format');
-  const jsonSlice = raw.substring(start, end);
+
+  // Try the object shape {"questions":[...]} first (what we now ask for and
+  // what Groq's JSON mode requires), fall back to a bare array for safety.
+  let objStart = raw.indexOf('{');
+  let objEnd = raw.lastIndexOf('}') + 1;
+  const arrStart = raw.indexOf('[');
+  const arrEnd = raw.lastIndexOf(']') + 1;
+  const useObj = objStart !== -1 && objEnd !== 0 && (arrStart === -1 || objStart < arrStart);
+  const jsonSlice = useObj ? raw.substring(objStart, objEnd) : raw.substring(arrStart, arrEnd);
+  if ((useObj && objStart === -1) || (!useObj && (arrStart === -1 || arrEnd === 0))) {
+    throw new Error('Invalid response format');
+  }
   try {
-    return parseJSONLenient(jsonSlice);
+    const parsed = parseJSONLenient(jsonSlice);
+    return Array.isArray(parsed) ? parsed : parsed.questions;
   } catch (parseErr) {
     const src = parseErr.attemptedText || jsonSlice;
     const pos = parseInt((parseErr.message.match(/position (\d+)/) || [])[1], 10);
