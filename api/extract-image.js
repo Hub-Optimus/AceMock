@@ -86,7 +86,7 @@ export default async function handler(req) {
       // slow or fails, fall back to Groq's vision model, which runs on much
       // faster inference hardware — this keeps the whole request well
       // inside Vercel's function time limit either way.
-      text = await tryOpenAI(imageBase64, mediaType, 25000);
+      text = await tryOpenAI(imageBase64, mediaType, 8000);
     } catch (openaiErr) {
       try {
         text = await tryGroq(imageBase64, mediaType);
