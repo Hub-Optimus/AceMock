@@ -2461,13 +2461,38 @@ async function processMultipleFiles(files) {
   renderFileChips();
 }
 
+function resizeImageFile(file, maxDim) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+      if (scale >= 1) { resolve({ blob: file, mediaType: file.type || 'image/jpeg' }); return; }
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(
+        (blob) => blob ? resolve({ blob, mediaType: 'image/jpeg' }) : reject(new Error('Resize failed')),
+        'image/jpeg', 0.92
+      );
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Could not load image for resizing')); };
+    img.src = url;
+  });
+}
+
 async function extractTextFromImage(file) {
-  const buf = await file.arrayBuffer();
+  // Cap the longer side at 1600px — cuts payload size and vision-processing
+  // time on whichever provider handles it, without hurting OCR readability.
+  const { blob, mediaType } = await resizeImageFile(file, 1600);
+  const buf = await blob.arrayBuffer();
   const bytes = new Uint8Array(buf);
   let binary = '';
   for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
   const base64 = btoa(binary);
-  const mediaType = file.type || 'image/jpeg';
   const res = await fetch('/api/extract-image', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
