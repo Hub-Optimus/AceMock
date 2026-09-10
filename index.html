@@ -1564,10 +1564,9 @@ async function startGeneration(overrideText) {
   }
 }
 
-// Repairs the most common way LLM "JSON" breaks: an unescaped " inside a
-// string value (e.g. source text that quotes someone — "...says, "hello"...").
-// Walks the string tracking in/out-of-string state; a quote that doesn't
-// structurally close a value (next non-space char isn't , : } ]) gets escaped.
+// Repairs the two most common ways LLM "JSON" breaks:
+// 1. An unescaped " inside a string value (source text quoting someone).
+// 2. A literal newline/tab inside a string value (common from doc-extracted text).
 function repairJSON(str) {
   let out = '';
   let inString = false;
@@ -1579,15 +1578,17 @@ function repairJSON(str) {
         out += ch;
       } else {
         let j = i + 1;
-        while (j < str.length && /\s/.test(str[j])) j++;
+        while (j < str.length && /[ \t]/.test(str[j])) j++;
         const nextCh = str[j];
-        if (nextCh === ',' || nextCh === ':' || nextCh === '}' || nextCh === ']' || j >= str.length) {
+        if (nextCh === ',' || nextCh === ':' || nextCh === '}' || nextCh === ']' || j >= str.length || nextCh === '\n' || nextCh === '\r') {
           inString = false;
           out += ch;
         } else {
           out += '\\"';
         }
       }
+    } else if (inString && (ch === '\n' || ch === '\r' || ch === '\t')) {
+      out += ch === '\n' ? '\\n' : ch === '\r' ? '\\r' : '\\t';
     } else {
       out += ch;
     }
