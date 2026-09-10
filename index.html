@@ -1564,39 +1564,53 @@ async function startGeneration(overrideText) {
   }
 }
 
-// Repairs the two most common ways LLM "JSON" breaks:
+// Repairs the most common ways LLM "JSON" breaks:
 // 1. An unescaped " inside a string value (source text quoting someone).
 // 2. A literal newline/tab inside a string value (common from doc-extracted text).
+// 3. A missing comma between two adjacent values (e.g. an options array
+//    immediately followed by the next property key with no comma).
 function repairJSON(str) {
   let out = '';
   let inString = false;
+  let lastStructSig = ''; // last significant char OUTSIDE a string: " } ] , : or 'v' (bare literal)
   for (let i = 0; i < str.length; i++) {
     const ch = str[i];
-    if (ch === '"' && str[i - 1] !== '\\') {
-      if (!inString) {
-        inString = true;
-        out += ch;
-      } else {
+    if (inString) {
+      if (ch === '"' && str[i - 1] !== '\\') {
         let j = i + 1;
         while (j < str.length && /[ \t]/.test(str[j])) j++;
         const nextCh = str[j];
-        if (nextCh === ',' || nextCh === ':' || nextCh === '}' || nextCh === ']' || j >= str.length || nextCh === '\n' || nextCh === '\r') {
-          inString = false;
-          out += ch;
-        } else {
-          out += '\\"';
-        }
-      }
-    } else if (inString && (ch === '\n' || ch === '\r' || ch === '\t')) {
-      out += ch === '\n' ? '\\n' : ch === '\r' ? '\\r' : '\\t';
-    } else {
-      out += ch;
+        const closesHere = nextCh === ',' || nextCh === ':' || nextCh === '}' || nextCh === ']' ||
+                            j >= str.length || nextCh === '\n' || nextCh === '\r';
+        if (closesHere) { inString = false; out += ch; lastStructSig = '"'; }
+        else { out += '\\"'; }
+      } else if (ch === '\n' || ch === '\r' || ch === '\t') {
+        out += ch === '\n' ? '\\n' : ch === '\r' ? '\\r' : '\\t';
+      } else { out += ch; }
+      continue;
     }
+    if (/\s/.test(ch)) { out += ch; continue; }
+    if (ch === '"') {
+      if (['"', '}', ']', 'v'].includes(lastStructSig)) out += ',';
+      out += ch; inString = true; continue;
+    }
+    if (ch === '{' || ch === '[') {
+      if (['"', '}', ']', 'v'].includes(lastStructSig)) out += ',';
+      out += ch; lastStructSig = ''; continue;
+    }
+    out += ch;
+    if (ch === ',' || ch === ':' || ch === '}' || ch === ']') lastStructSig = ch;
+    else lastStructSig = 'v';
   }
   return out;
 }
 function parseJSONLenient(str) {
-  try { return JSON.parse(str); } catch (e) { return JSON.parse(repairJSON(str)); }
+  try { return JSON.parse(str); }
+  catch (e) {
+    const repaired = repairJSON(str);
+    try { return JSON.parse(repaired); }
+    catch (e2) { e2.attemptedText = repaired; throw e2; }
+  }
 }
 
 async function callGroq(content, count, types) {
@@ -1698,8 +1712,9 @@ ${sampleContent(content)}`;
   try {
     return parseJSONLenient(jsonSlice);
   } catch (parseErr) {
+    const src = parseErr.attemptedText || jsonSlice;
     const pos = parseInt((parseErr.message.match(/position (\d+)/) || [])[1], 10);
-    const around = isNaN(pos) ? jsonSlice.slice(0, 200) : jsonSlice.slice(Math.max(0, pos - 100), pos + 100);
+    const around = isNaN(pos) ? src.slice(0, 200) : src.slice(Math.max(0, pos - 100), pos + 100);
     throw new Error(`${parseErr.message} — near: ...${around}...`);
   }
 }
@@ -2827,9 +2842,9 @@ async function generateCVInterview() {
       try {
         parsed = parseJSONLenient(raw.substring(start, end));
       } catch (parseErr) {
+        const src = parseErr.attemptedText || raw.substring(start, end);
         const pos = parseInt((parseErr.message.match(/position (\d+)/) || [])[1], 10);
-        const slice = raw.substring(start, end);
-        const around = isNaN(pos) ? slice.slice(0, 200) : slice.slice(Math.max(0, pos - 100), pos + 100);
+        const around = isNaN(pos) ? src.slice(0, 200) : src.slice(Math.max(0, pos - 100), pos + 100);
         throw new Error(`${parseErr.message} — near: ...${around}...`);
       }
     }
