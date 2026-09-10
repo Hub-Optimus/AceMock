@@ -28,6 +28,7 @@ export default async function handler(req) {
       body: JSON.stringify({
         model: 'gpt-5-mini',
         max_completion_tokens: 4096,
+        reasoning_effort: 'low',
         messages: [
           {
             role: 'system',

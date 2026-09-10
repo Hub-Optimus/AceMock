@@ -2473,7 +2473,15 @@ async function extractTextFromImage(file) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ imageBase64: base64, mediaType }),
   });
-  const data = await res.json();
+  const bodyText = await res.text();
+  let data;
+  try {
+    data = JSON.parse(bodyText);
+  } catch (e) {
+    throw new Error(res.ok
+      ? 'Server sent an unreadable response. Try again.'
+      : `Server error (${res.status}) — the request likely timed out or crashed before finishing. Try a smaller or clearer image.`);
+  }
   if (!res.ok) throw new Error(data.error || 'Image extraction failed');
   return data.text || '';
 }
