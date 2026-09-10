@@ -474,6 +474,7 @@ a{color:var(--indigo);text-decoration:none}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body>
 <div class="shell">
@@ -1468,7 +1469,7 @@ async function processFile(file) {
       const result = await mammoth.extractRawText({ arrayBuffer: buf });
       text = result.value;
     } else if (['jpg','jpeg','png','webp'].includes(ext)) {
-      status.textContent = 'Reading image (AI transcription)...';
+      status.textContent = 'Running OCR in your browser (first time loads the OCR engine, ~5-10s)...';
       text = await extractTextFromImage(file);
     } else {
       status.className = 'upload-status err';
@@ -2484,31 +2485,19 @@ function resizeImageFile(file, maxDim) {
   });
 }
 
+let tesseractWorker = null;
+async function getTesseractWorker() {
+  if (!tesseractWorker) tesseractWorker = await Tesseract.createWorker('eng');
+  return tesseractWorker;
+}
+
 async function extractTextFromImage(file) {
-  // Cap the longer side at 1600px — cuts payload size and vision-processing
-  // time on whichever provider handles it, without hurting OCR readability.
-  const { blob, mediaType } = await resizeImageFile(file, 1600);
-  const buf = await blob.arrayBuffer();
-  const bytes = new Uint8Array(buf);
-  let binary = '';
-  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-  const base64 = btoa(binary);
-  const res = await fetch('/api/extract-image', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ imageBase64: base64, mediaType }),
-  });
-  const bodyText = await res.text();
-  let data;
-  try {
-    data = JSON.parse(bodyText);
-  } catch (e) {
-    throw new Error(res.ok
-      ? 'Server sent an unreadable response. Try again.'
-      : `Server error (${res.status}) — the request likely timed out or crashed before finishing. Try a smaller or clearer image.`);
-  }
-  if (!res.ok) throw new Error(data.error || 'Image extraction failed');
-  return data.text || '';
+  // Runs entirely in the browser via WebAssembly — no server round-trip,
+  // so it can't hit a Vercel function timeout regardless of image size.
+  const { blob } = await resizeImageFile(file, 2000);
+  const worker = await getTesseractWorker();
+  const { data } = await worker.recognize(blob);
+  return (data.text || '').trim();
 }
 
 async function extractTextFromFile(file) {
@@ -2821,7 +2810,7 @@ async function processCVFile(file) {
     status.textContent = 'Unsupported file type. Use PDF, TXT, DOCX, or an image.';
     return;
   }
-  if (['jpg','jpeg','png','webp'].includes(ext)) status.textContent = 'Reading image (AI transcription)...';
+  if (['jpg','jpeg','png','webp'].includes(ext)) status.textContent = 'Running OCR in your browser (first time loads the OCR engine, ~5-10s)...';
   try {
     const text = await extractTextFromFile(file);
     if (!text || text.trim().length < 50) {
