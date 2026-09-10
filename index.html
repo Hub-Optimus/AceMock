@@ -1564,6 +1564,40 @@ async function startGeneration(overrideText) {
   }
 }
 
+// Repairs the most common way LLM "JSON" breaks: an unescaped " inside a
+// string value (e.g. source text that quotes someone — "...says, "hello"...").
+// Walks the string tracking in/out-of-string state; a quote that doesn't
+// structurally close a value (next non-space char isn't , : } ]) gets escaped.
+function repairJSON(str) {
+  let out = '';
+  let inString = false;
+  for (let i = 0; i < str.length; i++) {
+    const ch = str[i];
+    if (ch === '"' && str[i - 1] !== '\\') {
+      if (!inString) {
+        inString = true;
+        out += ch;
+      } else {
+        let j = i + 1;
+        while (j < str.length && /\s/.test(str[j])) j++;
+        const nextCh = str[j];
+        if (nextCh === ',' || nextCh === ':' || nextCh === '}' || nextCh === ']' || j >= str.length) {
+          inString = false;
+          out += ch;
+        } else {
+          out += '\\"';
+        }
+      }
+    } else {
+      out += ch;
+    }
+  }
+  return out;
+}
+function parseJSONLenient(str) {
+  try { return JSON.parse(str); } catch (e) { return JSON.parse(repairJSON(str)); }
+}
+
 async function callGroq(content, count, types) {
   // Long documents: sample beginning, middle, and end so questions
   // cover the whole material instead of only the first pages.
@@ -1659,7 +1693,7 @@ ${sampleContent(content)}`;
   const start = raw.indexOf('[');
   const end   = raw.lastIndexOf(']') + 1;
   if (start === -1 || end === 0) throw new Error('Invalid response format');
-  return JSON.parse(raw.substring(start, end));
+  return parseJSONLenient(raw.substring(start, end));
 }
 
 // ── Timer ─────────────────────────────────────────────
@@ -2775,14 +2809,14 @@ async function generateCVInterview() {
     let raw = (data.text || '').replace(/```json|```/g, '').trim();
     let parsed;
     try {
-      const obj = JSON.parse(raw);
+      const obj = parseJSONLenient(raw);
       parsed = Array.isArray(obj) ? obj : obj.questions;
     } catch(e) {
       // Fallback: extract the first [...] array from free-form text
       const start = raw.indexOf('[');
       const end = raw.lastIndexOf(']') + 1;
       if (start === -1 || end === 0) throw new Error('Invalid response format');
-      parsed = JSON.parse(raw.substring(start, end));
+      parsed = parseJSONLenient(raw.substring(start, end));
     }
     if (!Array.isArray(parsed) || parsed.length === 0) throw new Error('No questions returned');
 
