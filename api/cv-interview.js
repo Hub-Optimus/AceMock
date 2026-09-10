@@ -1,9 +1,12 @@
 export const config = { maxDuration: 60 };
 
-// Generating 30-50 questions in one giant AI call was the real cause of the
-// 504s — a single request that large can genuinely take 60-90s+. Instead we
-// fire 4 smaller, category-scoped requests IN PARALLEL, so total wall-clock
-// time is roughly the slowest single category, not the sum of all of them.
+// Generating 30-50 questions in one giant AI call was the original cause of
+// 504s — fixed by splitting into 4 smaller, category-scoped requests run IN
+// PARALLEL. But OpenAI alone can still be too slow for Vercel's Hobby
+// duration limit (especially if Fluid Compute isn't enabled on the project,
+// which can cap real duration well under the configured 60s). So each
+// category also races OpenAI against a 12s budget and falls back to Groq
+// (much faster inference) if it doesn't finish in time.
 
 function roleNote(targetRole) {
   return targetRole && targetRole.trim()
@@ -44,33 +47,16 @@ function buildPrompts(cvText, targetRole) {
   ];
 }
 
-async function callChatModel({ system, user, maxOut, useGroq }) {
-  if (useGroq) {
-    const groqKey = process.env.GROQ_API_KEY;
-    if (!groqKey) throw new Error('GROQ_API_KEY not configured');
-    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'openai/gpt-oss-120b',
-        temperature: 0.4,
-        max_tokens: maxOut,
-        response_format: { type: 'json_object' },
-        messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
-      }),
-    });
-    if (!res.ok) {
-      const e = await res.json().catch(() => ({}));
-      throw new Error(e.error?.message || `Groq error ${res.status}`);
-    }
-    const data = await res.json();
-    return data.choices?.[0]?.message?.content || '';
-  } else {
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) throw new Error('OPENAI_API_KEY not configured');
+async function callOpenAI(system, user, maxOut, timeoutMs) {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new Error('OPENAI_API_KEY not configured');
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      signal: controller.signal,
       body: JSON.stringify({
         model: 'gpt-5-mini',
         max_completion_tokens: maxOut,
@@ -81,10 +67,48 @@ async function callChatModel({ system, user, maxOut, useGroq }) {
     });
     if (!res.ok) {
       const e = await res.json().catch(() => ({}));
-      throw new Error(e.error?.message || `API error ${res.status}`);
+      throw new Error(e.error?.message || `OpenAI error ${res.status}`);
     }
     const data = await res.json();
     return data.choices?.[0]?.message?.content || '';
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function callGroq(system, user, maxOut) {
+  const groqKey = process.env.GROQ_API_KEY;
+  if (!groqKey) throw new Error('GROQ_API_KEY not configured');
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'openai/gpt-oss-120b',
+      temperature: 0.4,
+      max_tokens: maxOut,
+      response_format: { type: 'json_object' },
+      messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
+    }),
+  });
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}));
+    throw new Error(e.error?.message || `Groq error ${res.status}`);
+  }
+  const data = await res.json();
+  return data.choices?.[0]?.message?.content || '';
+}
+
+// Groq runs on much faster inference hardware than OpenAI, so it's the
+// reliable option for staying inside Vercel's function time limit. When the
+// person picks OpenAI (better quality), we still give it a real shot first —
+// but bounded to 12s — and fall back to Groq per-category if it's slow. When
+// they pick Groq directly, skip straight there.
+async function callChatModel({ system, user, maxOut, useGroq }) {
+  if (useGroq) return callGroq(system, user, maxOut);
+  try {
+    return await callOpenAI(system, user, maxOut, 12000);
+  } catch (openaiErr) {
+    return callGroq(system, user, maxOut);
   }
 }
 
