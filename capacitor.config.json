@@ -1,0 +1,6 @@
+{
+  "appId": "com.huboptimus.acemock",
+  "appName": "AceMock",
+  "webDir": "www",
+  "bundledWebRuntime": false
+}

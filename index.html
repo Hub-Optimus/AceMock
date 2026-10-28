@@ -999,6 +999,16 @@ Works with any text — lecture notes, PDF content, chapter summaries. Minimum 3
 </div>
 
 <script>
+// ── API base (web vs packaged mobile app) ──────────────
+// On the Vercel-hosted site, relative '/api/...' works fine.
+// Inside the Capacitor Android app there's no server alongside it,
+// so calls must go to the full Vercel domain instead. Capacitor
+// injects window.Capacitor automatically at build time — nothing to
+// add manually. Replace the URL below with your real Vercel domain.
+const API_BASE = (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform())
+  ? 'https://acemock.vercel.app'
+  : '';
+
 // ── State ─────────────────────────────────────────────
 let questions = [];
 let answers   = {};
@@ -1692,7 +1702,7 @@ Rules:
 CONTENT:
 ${sampleContent(content)}`;
 
-  const res = await fetch('/api/generate', {
+  const res = await fetch(`${API_BASE}/api/generate`, {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({
@@ -2716,7 +2726,7 @@ async function generateNotes() {
     let diagramImages = [];
     // (vision extraction skipped here — handled separately if needed)
 
-    const res = await fetch('/api/notes', {
+    const res = await fetch(`${API_BASE}/api/notes`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -2856,7 +2866,7 @@ async function generateCVInterview() {
   btn.innerHTML = '<div class="spin-ring" style="width:20px;height:20px;border-width:2.5px;margin:0"></div> Generating question bank…';
 
   try {
-    const res = await fetch('/api/cv-interview', {
+    const res = await fetch(`${API_BASE}/api/cv-interview`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ cvText, targetRole, useGroq: cvModel === 'groq' })
