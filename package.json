@@ -1,0 +1,26 @@
+{
+  "name": "acemock",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "mobile:sync": "node -e \"require('fs').copyFileSync('index.html','www/index.html')\" && npx cap sync android"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Hub-Optimus/AceMock.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Hub-Optimus/AceMock/issues"
+  },
+  "homepage": "https://github.com/Hub-Optimus/AceMock#readme",
+  "dependencies": {
+    "@capacitor/android": "^8.6.0",
+    "@capacitor/cli": "^8.6.0",
+    "@capacitor/core": "^8.6.0"
+  }
+}
