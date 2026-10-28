@@ -474,6 +474,7 @@ a{color:var(--indigo);text-decoration:none}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body>
 <div class="shell">
@@ -526,6 +527,7 @@ a{color:var(--indigo);text-decoration:none}
       <button class="tab-btn active" id="tab-quiz-btn" onclick="switchTab('quiz')">📝 Generate Quiz</button>
       <button class="tab-btn" id="tab-notes-btn" onclick="switchTab('notes')">📚 Generate Notes</button>
       <button class="tab-btn" id="tab-saved-btn" onclick="switchTab('saved')">💾 Saved Notes</button>
+      <button class="tab-btn" id="tab-cv-btn" onclick="switchTab('cv')">🧑‍💼 CV Interview Prep</button>
     </div>
 
     <!-- ══ QUIZ TAB ══ -->
@@ -540,10 +542,10 @@ a{color:var(--indigo);text-decoration:none}
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
       </div>
       <div class="upload-text">
-        <div class="upload-title">Upload a file — PDF, TXT, or DOCX</div>
-        <div class="upload-sub">Text is extracted in your browser and shown below — that's exactly what the AI reads</div>
+        <div class="upload-title">Upload a file — PDF, TXT, DOCX, or image</div>
+        <div class="upload-sub">Text is extracted and shown below — that's exactly what the AI reads</div>
       </div>
-      <input type="file" id="file-input" accept=".pdf,.txt,.docx,.doc" style="display:none" onchange="handleFile(event)">
+      <input type="file" id="file-input" accept=".pdf,.txt,.docx,.doc,.jpg,.jpeg,.png,.webp" style="display:none" onchange="handleFile(event)">
     </div>
     <div class="upload-status" id="upload-status"></div>
 
@@ -638,9 +640,6 @@ Works with any text — lecture notes, PDF content, chapter summaries. Minimum 3
       Generate exam paper
     </button>
 
-    <div class="marking-info">
-      <strong>BITSoM marking scheme:</strong> MCQ +4 correct / −1 wrong / 0 skipped · MSQ +4 if all correct selected / 0 otherwise (no partial marking) · NAT +4 correct / 0 wrong (no negative marking)
-    </div>
     <div id="setup-err"></div>
     </div><!-- /tab-quiz -->
 
@@ -659,13 +658,13 @@ Works with any text — lecture notes, PDF content, chapter summaries. Minimum 3
         ondragleave="handleMultiDragLeave(event)"
         ondrop="handleMultiDrop(event)"
         onclick="document.getElementById('multi-file-input').click()">
-        <input type="file" id="multi-file-input" accept=".pdf,.txt,.docx,.doc"
+        <input type="file" id="multi-file-input" accept=".pdf,.txt,.docx,.doc,.jpg,.jpeg,.png,.webp"
           multiple style="display:none" onchange="handleMultiFileSelect(event)">
         <div class="mdz-icon">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
         </div>
         <div class="mdz-title">Drop files here or click to browse</div>
-        <div class="mdz-sub">PDF, TXT, DOCX · up to 5 files · pre-read, post-lecture, transcripts — all welcome</div>
+        <div class="mdz-sub">PDF, TXT, DOCX, image · up to 5 files · pre-read, post-lecture, transcripts — all welcome</div>
       </div>
 
       <!-- Uploaded files list -->
@@ -757,6 +756,80 @@ Works with any text — lecture notes, PDF content, chapter summaries. Minimum 3
       <p class="setup-tagline">Your saved notes — click any to read, or feed directly into quiz generation.</p>
       <div id="saved-notes-list"><div class="hist-empty">Loading saved notes…</div></div>
     </div><!-- /tab-saved -->
+
+    <!-- ══ CV INTERVIEW PREP TAB ══ -->
+    <div class="tab-pane" id="tab-cv">
+      <p class="setup-tagline">Upload any CV — any field, any role — and get likely interview questions with model answers based on it.</p>
+
+      <div class="upload-zone" id="cv-upload-zone" onclick="document.getElementById('cv-file-input').click()" ondragover="handleCVDragOver(event)" ondragleave="handleCVDragLeave(event)" ondrop="handleCVDrop(event)">
+        <div class="upload-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        </div>
+        <div class="upload-text">
+          <div class="upload-title">Upload a CV — PDF, TXT, DOCX, or image</div>
+          <div class="upload-sub">Text is extracted and shown below — that's exactly what the AI reads</div>
+        </div>
+        <input type="file" id="cv-file-input" accept=".pdf,.txt,.docx,.doc,.jpg,.jpeg,.png,.webp" style="display:none" onchange="handleCVFile(event)">
+      </div>
+      <div class="upload-status" id="cv-upload-status"></div>
+
+      <div style="margin:14px 0">
+        <label style="font-size:11.5px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:6px">Target role (optional)</label>
+        <input id="cv-target-role" type="text" class="notes-topic-field" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:13.5px;outline:none" placeholder="e.g. Software Engineer, Product Manager, Business Analyst...">
+      </div>
+
+      <textarea id="cv-content"
+        style="width:100%;min-height:120px;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;color:var(--text);background:var(--bg2);outline:none;resize:vertical;line-height:1.6;font-family:inherit;margin-bottom:14px"
+        placeholder="Or paste CV text directly here..."
+        oninput="onCVTextChange()"></textarea>
+
+      <div style="margin-bottom:12px">
+        <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.3px;margin-bottom:6px">AI Model</div>
+        <div class="model-selector-row">
+          <button class="model-btn active-claude" id="cv-model-openai-btn" onclick="selectCVModel('openai')">
+            🧠 OpenAI GPT-5 <span style="font-size:10px;padding:1px 5px;background:var(--violet-l);color:var(--violet);border-radius:4px;font-weight:700">Recommended</span>
+            <div style="font-size:10px;font-weight:400;color:var(--text3);margin-top:2px">Best quality · ~$0.05/session</div>
+          </button>
+          <button class="model-btn" id="cv-model-groq-btn" onclick="selectCVModel('groq')">
+            ⚡ Groq (Llama) <span style="font-size:10px;padding:1px 5px;background:var(--cyan-l);color:var(--cyan);border-radius:4px;font-weight:700">Free</span>
+            <div style="font-size:10px;font-weight:400;color:var(--text3);margin-top:2px">Good quality · $0 cost</div>
+          </button>
+        </div>
+      </div>
+
+      <button class="notes-gen-btn" id="cv-gen-btn" onclick="generateCVInterview()" disabled>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        Generate Interview Prep — add a CV above
+      </button>
+
+      <div class="notes-output" id="cv-output">
+        <div class="notes-toolbar">
+          <span class="notes-toolbar-title" id="cv-progress-label">Interview Question Bank</span>
+          <button class="btn-dl-notes" onclick="downloadCVPrep()">⬇ Download (.txt)</button>
+        </div>
+
+        <div style="display:flex">
+          <div style="width:190px;min-width:190px;padding:16px;border-right:1px solid var(--border)">
+            <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.3px;margin-bottom:10px">Questions</div>
+            <div id="cv-qgrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px"></div>
+          </div>
+
+          <div style="flex:1;padding:20px;min-width:0">
+            <span id="cv-cat-badge" style="display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;background:var(--indigo-l);color:var(--indigo);text-transform:uppercase;letter-spacing:.3px;margin-bottom:10px"></span>
+            <div id="cv-question-text" style="font-size:15px;font-weight:600;color:var(--text);line-height:1.5;margin-bottom:14px"></div>
+            <button class="btn-use-notes" id="cv-show-answer-btn" onclick="toggleCVAnswer()">Show answer</button>
+            <div id="cv-answer-box" style="display:none;margin-top:12px;padding:14px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;font-size:13.5px;color:var(--text2);line-height:1.6"></div>
+
+            <div style="display:flex;justify-content:space-between;margin-top:22px">
+              <button class="btn-dl-notes" onclick="cvPrev()">← Previous</button>
+              <button class="btn-dl-notes" onclick="cvNext()">Next →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="cv-err"></div>
+    </div><!-- /tab-cv -->
+
 
   </div>
 </div>
@@ -1392,9 +1465,12 @@ async function processFile(file) {
       const buf = await file.arrayBuffer();
       const result = await mammoth.extractRawText({ arrayBuffer: buf });
       text = result.value;
+    } else if (['jpg','jpeg','png','webp'].includes(ext)) {
+      status.textContent = 'Running OCR in your browser (first time loads the OCR engine, ~5-10s)...';
+      text = await extractTextFromImage(file);
     } else {
       status.className = 'upload-status err';
-      status.textContent = 'Unsupported file type. Use PDF, TXT, or DOCX.';
+      status.textContent = 'Unsupported file type. Use PDF, TXT, DOCX, or an image.';
       return;
     }
     if (!text || text.trim().length < 100) {
@@ -1486,6 +1562,55 @@ async function startGeneration(overrideText) {
   }
 }
 
+// Repairs the most common ways LLM "JSON" breaks:
+// 1. An unescaped " inside a string value (source text quoting someone).
+// 2. A literal newline/tab inside a string value (common from doc-extracted text).
+// 3. A missing comma between two adjacent values (e.g. an options array
+//    immediately followed by the next property key with no comma).
+function repairJSON(str) {
+  let out = '';
+  let inString = false;
+  let lastStructSig = ''; // last significant char OUTSIDE a string: " } ] , : or 'v' (bare literal)
+  for (let i = 0; i < str.length; i++) {
+    const ch = str[i];
+    if (inString) {
+      if (ch === '"' && str[i - 1] !== '\\') {
+        let j = i + 1;
+        while (j < str.length && /[ \t]/.test(str[j])) j++;
+        const nextCh = str[j];
+        const closesHere = nextCh === ',' || nextCh === ':' || nextCh === '}' || nextCh === ']' ||
+                            j >= str.length || nextCh === '\n' || nextCh === '\r';
+        if (closesHere) { inString = false; out += ch; lastStructSig = '"'; }
+        else { out += '\\"'; }
+      } else if (ch === '\n' || ch === '\r' || ch === '\t') {
+        out += ch === '\n' ? '\\n' : ch === '\r' ? '\\r' : '\\t';
+      } else { out += ch; }
+      continue;
+    }
+    if (/\s/.test(ch)) { out += ch; continue; }
+    if (ch === '"') {
+      if (['"', '}', ']', 'v'].includes(lastStructSig)) out += ',';
+      out += ch; inString = true; continue;
+    }
+    if (ch === '{' || ch === '[') {
+      if (['"', '}', ']', 'v'].includes(lastStructSig)) out += ',';
+      out += ch; lastStructSig = ''; continue;
+    }
+    out += ch;
+    if (ch === ',' || ch === ':' || ch === '}' || ch === ']') lastStructSig = ch;
+    else lastStructSig = 'v';
+  }
+  return out;
+}
+function parseJSONLenient(str) {
+  try { return JSON.parse(str); }
+  catch (e) {
+    const repaired = repairJSON(str);
+    try { return JSON.parse(repaired); }
+    catch (e2) { e2.attemptedText = repaired; throw e2; }
+  }
+}
+
 async function callGroq(content, count, types) {
   // Long documents: sample beginning, middle, and end so questions
   // cover the whole material instead of only the first pages.
@@ -1512,14 +1637,19 @@ async function callGroq(content, count, types) {
 
   const offlinePrompt = `You are a senior exam-paper setter replicating the BITSoM x Masai offline exam exactly.
 
-Return ONLY a JSON array. No markdown fences, no preamble.
+Return ONLY a JSON object. No markdown fences, no preamble.
 
 JSON format:
-[
+{"questions":[
   {"id":1,"type":"MCQ","question":"...","options":["A. ...","B. ...","C. ...","D. ..."],"correct":2,"explanation":"..."},
   {"id":2,"type":"MSQ","question":"...","options":["A. ...","B. ...","C. ...","D. ..."],"correct":[0,2],"explanation":"..."},
   {"id":3,"type":"NAT","question":"...","correct":"3000","explanation":"Step 1: ..."}
-]
+]}
+
+CRITICAL JSON VALIDITY RULES — output must parse with a strict JSON parser:
+- If any question, option, or explanation text needs to quote someone or reference a literal quote, escape it as \\" — never leave a bare " inside a string.
+- Never put a raw line break inside a string value — use a space instead.
+- Every object in the array needs a comma after it except the last one; double-check every "}" and "]" is followed by a comma before the next field or item.
 
 MANDATORY RULES:
 1. SCENARIO-FIRST: Every question opens with a named Indian professional in a real business situation. The question tests APPLY not RECALL.
@@ -1533,14 +1663,19 @@ MANDATORY RULES:
 
   const standardPrompt = `You are an expert exam question writer for a Product Management with Generative and Agentic AI certification.
 
-Return ONLY a JSON array. No markdown, no preamble.
+Return ONLY a JSON object. No markdown, no preamble.
 
 JSON format:
-[
+{"questions":[
   {"id":1,"type":"MCQ","question":"...","options":["A. ...","B. ...","C. ...","D. ..."],"correct":2,"explanation":"..."},
   {"id":2,"type":"MSQ","question":"...","options":["A. ...","B. ...","C. ...","D. ..."],"correct":[0,2],"explanation":"..."},
   {"id":3,"type":"NAT","question":"...","correct":"3000","explanation":"..."}
-]
+]}
+
+CRITICAL JSON VALIDITY RULES — output must parse with a strict JSON parser:
+- If any question, option, or explanation text needs to quote someone or reference a literal quote, escape it as \\" — never leave a bare " inside a string.
+- Never put a raw line break inside a string value — use a space instead.
+- Every object in the array needs a comma after it except the last one; double-check every "}" and "]" is followed by a comma before the next field or item.
 
 Rules:
 1. Open most questions with a scenario using a named person.
@@ -1557,7 +1692,7 @@ Rules:
 CONTENT:
 ${sampleContent(content)}`;
 
-  const res = await fetch('https://acemock-generate.prakashkoulagi1996.workers.dev', {
+  const res = await fetch('/api/generate', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({
@@ -1577,11 +1712,27 @@ ${sampleContent(content)}`;
 
   const data = await res.json();
   let raw = (data.text || '').replace(/```json|```/g, '').trim();
-  // Find JSON array
-  const start = raw.indexOf('[');
-  const end   = raw.lastIndexOf(']') + 1;
-  if (start === -1 || end === 0) throw new Error('Invalid response format');
-  return JSON.parse(raw.substring(start, end));
+
+  // Try the object shape {"questions":[...]} first (what we now ask for and
+  // what Groq's JSON mode requires), fall back to a bare array for safety.
+  let objStart = raw.indexOf('{');
+  let objEnd = raw.lastIndexOf('}') + 1;
+  const arrStart = raw.indexOf('[');
+  const arrEnd = raw.lastIndexOf(']') + 1;
+  const useObj = objStart !== -1 && objEnd !== 0 && (arrStart === -1 || objStart < arrStart);
+  const jsonSlice = useObj ? raw.substring(objStart, objEnd) : raw.substring(arrStart, arrEnd);
+  if ((useObj && objStart === -1) || (!useObj && (arrStart === -1 || arrEnd === 0))) {
+    throw new Error('Invalid response format');
+  }
+  try {
+    const parsed = parseJSONLenient(jsonSlice);
+    return Array.isArray(parsed) ? parsed : parsed.questions;
+  } catch (parseErr) {
+    const src = parseErr.attemptedText || jsonSlice;
+    const pos = parseInt((parseErr.message.match(/position (\d+)/) || [])[1], 10);
+    const around = isNaN(pos) ? src.slice(0, 200) : src.slice(Math.max(0, pos - 100), pos + 100);
+    throw new Error(`${parseErr.message} — near: ...${around}...`);
+  }
 }
 
 // ── Timer ─────────────────────────────────────────────
@@ -2233,7 +2384,7 @@ let uploadedFiles = []; // [{name, text, type}]  type: 'masai'|'transcript'|'oth
 let visionEnabled = false;
 
 function switchTab(tab) {
-  ['quiz','notes','saved'].forEach(t => {
+  ['quiz','notes','saved','cv'].forEach(t => {
     document.getElementById(`tab-${t}`).classList.toggle('active', t === tab);
     document.getElementById(`tab-${t}-btn`).classList.toggle('active', t === tab);
   });
@@ -2275,7 +2426,7 @@ async function processMultipleFiles(files) {
 
   for (const file of toProcess) {
     const ext = file.name.split('.').pop().toLowerCase();
-    if (!['pdf','txt','docx','doc'].includes(ext)) {
+    if (!['pdf','txt','docx','doc','jpg','jpeg','png','webp'].includes(ext)) {
       toast(`Skipped ${file.name} — unsupported format`);
       continue;
     }
@@ -2308,9 +2459,48 @@ async function processMultipleFiles(files) {
   renderFileChips();
 }
 
+function resizeImageFile(file, maxDim) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+      if (scale >= 1) { resolve({ blob: file, mediaType: file.type || 'image/jpeg' }); return; }
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(
+        (blob) => blob ? resolve({ blob, mediaType: 'image/jpeg' }) : reject(new Error('Resize failed')),
+        'image/jpeg', 0.92
+      );
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Could not load image for resizing')); };
+    img.src = url;
+  });
+}
+
+let tesseractWorker = null;
+async function getTesseractWorker() {
+  if (!tesseractWorker) tesseractWorker = await Tesseract.createWorker('eng');
+  return tesseractWorker;
+}
+
+async function extractTextFromImage(file) {
+  // Runs entirely in the browser via WebAssembly — no server round-trip,
+  // so it can't hit a Vercel function timeout regardless of image size.
+  const { blob } = await resizeImageFile(file, 2000);
+  const worker = await getTesseractWorker();
+  const { data } = await worker.recognize(blob);
+  return (data.text || '').trim();
+}
+
 async function extractTextFromFile(file) {
   const ext = file.name.split('.').pop().toLowerCase();
   if (ext === 'txt') return await file.text();
+  if (['jpg','jpeg','png','webp'].includes(ext)) return await extractTextFromImage(file);
   if (ext === 'pdf') {
     const pdfjsLib = window['pdfjs-dist/build/pdf'];
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -2526,7 +2716,7 @@ async function generateNotes() {
     let diagramImages = [];
     // (vision extraction skipped here — handled separately if needed)
 
-    const res = await fetch('https://acemock-notes.prakashkoulagi1996.workers.dev', {
+    const res = await fetch('/api/notes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -2578,6 +2768,204 @@ async function generateNotes() {
   btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg> Generate Notes';
 }
 
+
+// ── CV Interview Prep tab ──────────────────────────────
+let cvExtractedText = '';
+let cvModel = 'openai';
+
+function selectCVModel(model) {
+  cvModel = model;
+  document.getElementById('cv-model-openai-btn').className = 'model-btn' + (model === 'openai' ? ' active-claude' : '');
+  document.getElementById('cv-model-groq-btn').className = 'model-btn' + (model === 'groq' ? ' active-groq' : '');
+}
+
+function handleCVDragOver(e) {
+  e.preventDefault();
+  document.getElementById('cv-upload-zone').classList.add('drag-over');
+}
+function handleCVDragLeave(e) {
+  document.getElementById('cv-upload-zone').classList.remove('drag-over');
+}
+function handleCVDrop(e) {
+  e.preventDefault();
+  document.getElementById('cv-upload-zone').classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) processCVFile(file);
+}
+function handleCVFile(e) {
+  const file = e.target.files[0];
+  if (file) processCVFile(file);
+}
+
+async function processCVFile(file) {
+  const status = document.getElementById('cv-upload-status');
+  status.className = 'upload-status ok';
+  status.textContent = 'Reading file...';
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (!['pdf','txt','docx','doc','jpg','jpeg','png','webp'].includes(ext)) {
+    status.className = 'upload-status err';
+    status.textContent = 'Unsupported file type. Use PDF, TXT, DOCX, or an image.';
+    return;
+  }
+  if (['jpg','jpeg','png','webp'].includes(ext)) status.textContent = 'Running OCR in your browser (first time loads the OCR engine, ~5-10s)...';
+  try {
+    const text = await extractTextFromFile(file);
+    if (!text || text.trim().length < 50) {
+      status.className = 'upload-status err';
+      status.textContent = 'Could not extract text from this file. Try pasting the CV text directly.';
+      return;
+    }
+    cvExtractedText = text.trim();
+    document.getElementById('cv-content').value = cvExtractedText;
+    onCVTextChange();
+    status.className = 'upload-status ok';
+    status.textContent = `✓ ${file.name} — text extracted below. Edit if needed before generating.`;
+  } catch(e) {
+    status.className = 'upload-status err';
+    status.textContent = `Could not read file: ${e.message}. Try pasting directly.`;
+  }
+}
+
+function onCVTextChange() {
+  const val = document.getElementById('cv-content').value.trim();
+  const btn = document.getElementById('cv-gen-btn');
+  if (val.length > 50) {
+    btn.disabled = false;
+    btn.lastChild.textContent = ' Generate Interview Prep';
+  } else {
+    btn.disabled = true;
+    btn.lastChild.textContent = ' Generate Interview Prep — add a CV above';
+  }
+}
+
+let cvQuestions = [];
+let cvQIndex = 0;
+
+const CV_CAT_LABELS = { Technical: 'Technical', Behavioral: 'Behavioral', Gap: 'Gaps & Weak Points', AskInterviewer: 'Ask the Interviewer' };
+
+async function generateCVInterview() {
+  const cvText = document.getElementById('cv-content').value.trim();
+  if (!cvText || cvText.length < 50) {
+    document.getElementById('cv-err').innerHTML = '<div class="err-box">Upload or paste a CV first — at least a few lines of real content.</div>';
+    return;
+  }
+  document.getElementById('cv-err').innerHTML = '';
+  const targetRole = document.getElementById('cv-target-role').value.trim();
+  const btn = document.getElementById('cv-gen-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spin-ring" style="width:20px;height:20px;border-width:2.5px;margin:0"></div> Generating question bank…';
+
+  try {
+    const res = await fetch('/api/cv-interview', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cvText, targetRole, useGroq: cvModel === 'groq' })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `API error ${res.status}`);
+    }
+    const data = await res.json();
+    let raw = (data.text || '').replace(/```json|```/g, '').trim();
+    let parsed;
+    try {
+      const obj = parseJSONLenient(raw);
+      parsed = Array.isArray(obj) ? obj : obj.questions;
+    } catch(e) {
+      // Fallback: extract the first [...] array from free-form text
+      const start = raw.indexOf('[');
+      const end = raw.lastIndexOf(']') + 1;
+      if (start === -1 || end === 0) throw new Error('Invalid response format');
+      try {
+        parsed = parseJSONLenient(raw.substring(start, end));
+      } catch (parseErr) {
+        const src = parseErr.attemptedText || raw.substring(start, end);
+        const pos = parseInt((parseErr.message.match(/position (\d+)/) || [])[1], 10);
+        const around = isNaN(pos) ? src.slice(0, 200) : src.slice(Math.max(0, pos - 100), pos + 100);
+        throw new Error(`${parseErr.message} — near: ...${around}...`);
+      }
+    }
+    if (!Array.isArray(parsed) || parsed.length === 0) throw new Error('No questions returned');
+
+    cvQuestions = parsed;
+    cvQIndex = 0;
+    buildCVGrid();
+    renderCVQuestion();
+    document.getElementById('cv-output').classList.add('show');
+    toast(`✓ ${cvQuestions.length} interview questions generated`);
+  } catch(err) {
+    document.getElementById('cv-err').innerHTML = `<div class="err-box">Generation failed: ${err.message}</div>`;
+  }
+  btn.disabled = false;
+  btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg> Generate Interview Prep';
+}
+
+function buildCVGrid() {
+  const grid = document.getElementById('cv-qgrid');
+  grid.innerHTML = cvQuestions.map((q, i) => `
+    <button onclick="cvGoTo(${i})" id="cv-dot-${i}" style="width:32px;height:32px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);font-size:12px;font-weight:600;color:var(--text2);cursor:pointer">${i + 1}</button>
+  `).join('');
+}
+
+function renderCVQuestion() {
+  const q = cvQuestions[cvQIndex];
+  if (!q) return;
+  document.getElementById('cv-progress-label').textContent = `Question ${cvQIndex + 1} of ${cvQuestions.length}`;
+  document.getElementById('cv-cat-badge').textContent = CV_CAT_LABELS[q.category] || q.category || 'Question';
+  document.getElementById('cv-question-text').textContent = q.question || '';
+  document.getElementById('cv-answer-box').style.display = 'none';
+  document.getElementById('cv-answer-box').textContent = q.answer || '';
+  const showBtn = document.getElementById('cv-show-answer-btn');
+  showBtn.textContent = 'Show answer';
+  showBtn.disabled = false;
+  cvQuestions.forEach((_, i) => {
+    const dot = document.getElementById(`cv-dot-${i}`);
+    if (!dot) return;
+    dot.style.borderColor = i === cvQIndex ? 'var(--indigo)' : 'var(--border)';
+    dot.style.background = i === cvQIndex ? 'var(--indigo-l)' : 'var(--bg)';
+    dot.style.color = i === cvQIndex ? 'var(--indigo)' : 'var(--text2)';
+  });
+}
+
+function toggleCVAnswer() {
+  const box = document.getElementById('cv-answer-box');
+  const btn = document.getElementById('cv-show-answer-btn');
+  const showing = box.style.display !== 'none';
+  if (showing) {
+    box.style.display = 'none';
+    btn.textContent = 'Show answer';
+    return;
+  }
+  btn.textContent = 'Thinking…';
+  btn.disabled = true;
+  setTimeout(() => {
+    box.style.display = 'block';
+    btn.textContent = 'Hide answer';
+    btn.disabled = false;
+  }, 2000);
+}
+
+function cvGoTo(i) {
+  if (i < 0 || i >= cvQuestions.length) return;
+  cvQIndex = i;
+  renderCVQuestion();
+}
+function cvNext() { cvGoTo(cvQIndex + 1); }
+function cvPrev() { cvGoTo(cvQIndex - 1); }
+
+function downloadCVPrep() {
+  if (!cvQuestions.length) { toast('Generate interview prep first'); return; }
+  const text = cvQuestions.map((q, i) =>
+    `${i + 1}. [${CV_CAT_LABELS[q.category] || q.category}] ${q.question}\n${q.answer}\n`
+  ).join('\n');
+  const blob = new Blob([text], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'interview-prep.txt';
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 async function deleteSavedNote(id) {
   if (!confirm('Delete this note? Cannot be undone.')) return;
