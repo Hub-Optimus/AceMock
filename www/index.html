@@ -850,7 +850,15 @@ Works with any text — lecture notes, PDF content, chapter summaries. Minimum 3
           <div style="flex:1;padding:20px;min-width:0">
             <span id="cv-cat-badge" style="display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;background:var(--indigo-l);color:var(--indigo);text-transform:uppercase;letter-spacing:.3px;margin-bottom:10px"></span>
             <div id="cv-question-text" style="font-size:15px;font-weight:600;color:var(--text);line-height:1.5;margin-bottom:14px"></div>
-            <button class="btn-use-notes" id="cv-show-answer-btn" onclick="toggleCVAnswer()">Show answer</button>
+            <div class="field" style="margin-bottom:10px">
+              <label for="cv-user-answer">Your answer (optional — get AI feedback before seeing the model answer)</label>
+              <textarea id="cv-user-answer" rows="4" placeholder="Type your answer out loud-style, like you'd say it in the interview..." style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:13.5px;color:var(--text);background:var(--bg2);outline:none;resize:vertical;font-family:inherit"></textarea>
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <button class="btn-use-notes" id="cv-feedback-btn" onclick="getCVFeedback()">Get feedback on my answer</button>
+              <button class="btn-use-notes" id="cv-show-answer-btn" onclick="toggleCVAnswer()">Show model answer</button>
+            </div>
+            <div id="cv-feedback-box" style="display:none;margin-top:12px;padding:14px;border-radius:10px;font-size:13.5px;line-height:1.6"></div>
             <div id="cv-answer-box" style="display:none;margin-top:12px;padding:14px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;font-size:13.5px;color:var(--text2);line-height:1.6"></div>
 
             <div style="display:flex;justify-content:space-between;margin-top:22px">
@@ -3006,8 +3014,15 @@ function renderCVQuestion() {
   document.getElementById('cv-answer-box').style.display = 'none';
   document.getElementById('cv-answer-box').textContent = q.answer || '';
   const showBtn = document.getElementById('cv-show-answer-btn');
-  showBtn.textContent = 'Show answer';
+  showBtn.textContent = 'Show model answer';
   showBtn.disabled = false;
+  document.getElementById('cv-user-answer').value = '';
+  const fbBox = document.getElementById('cv-feedback-box');
+  fbBox.style.display = 'none';
+  fbBox.innerHTML = '';
+  const fbBtn = document.getElementById('cv-feedback-btn');
+  fbBtn.disabled = false;
+  fbBtn.textContent = 'Get feedback on my answer';
   cvQuestions.forEach((_, i) => {
     const dot = document.getElementById(`cv-dot-${i}`);
     if (!dot) return;
@@ -3033,6 +3048,53 @@ function toggleCVAnswer() {
     btn.textContent = 'Hide answer';
     btn.disabled = false;
   }, 2000);
+}
+
+async function getCVFeedback() {
+  const q = cvQuestions[cvQIndex];
+  if (!q) return;
+  const userAnswer = document.getElementById('cv-user-answer').value.trim();
+  if (!userAnswer) { toast('Type your answer first'); return; }
+
+  const btn = document.getElementById('cv-feedback-btn');
+  const box = document.getElementById('cv-feedback-box');
+  btn.disabled = true; btn.textContent = 'Scoring your answer…';
+  box.style.display = 'none';
+
+  try {
+    const res = await fetch(`${API_BASE}/api/cv-feedback`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        question: q.question,
+        idealAnswer: q.answer,
+        userAnswer,
+        category: q.category,
+        useGroq: cvModel === 'groq'
+      })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `API error ${res.status}`);
+    }
+    const data = await res.json();
+    const score = data.score ?? 0;
+    const color = score >= 7 ? 'var(--green)' : score >= 4 ? '#b45309' : 'var(--red)';
+    const bg = score >= 7 ? 'var(--green-l)' : score >= 4 ? 'var(--amber-l)' : 'var(--red-l)';
+    box.style.background = bg;
+    box.style.border = `1px solid ${color}`;
+    box.style.color = 'var(--text2)';
+    box.innerHTML = `<b style="color:${color}">Score: ${score}/10</b><div style="margin-top:6px">${(data.feedback || '').replace(/</g, '&lt;')}</div>`;
+    box.style.display = 'block';
+  } catch (e) {
+    box.style.background = 'var(--red-l)';
+    box.style.border = '1px solid var(--red-b)';
+    box.style.color = 'var(--red)';
+    box.innerHTML = `Could not score answer: ${e.message}`;
+    box.style.display = 'block';
+  }
+  btn.disabled = false;
+  btn.textContent = 'Get feedback on my answer';
 }
 
 function cvGoTo(i) {
