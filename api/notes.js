@@ -15,6 +15,46 @@ For every concept produce notes in this format:
 ---
 For framework diagrams reproduce as ASCII. End with a QUICK REVISION TABLE. Output clean markdown only.`;
 
+
+// Streams the model's text straight to the browser as text/plain.
+// Streaming keeps the Edge function alive (no 504 on long generations).
+function streamChat(upstream) {
+  const enc = new TextEncoder();
+  const dec = new TextDecoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      const reader = upstream.body.getReader();
+      let buf = '';
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buf += dec.decode(value, { stream: true });
+          const lines = buf.split('\n');
+          buf = lines.pop();
+          for (const line of lines) {
+            const l = line.trim();
+            if (!l.startsWith('data:')) continue;
+            const payload = l.slice(5).trim();
+            if (payload === '[DONE]') continue;
+            try {
+              const delta = JSON.parse(payload).choices?.[0]?.delta?.content;
+              if (delta) controller.enqueue(enc.encode(delta));
+            } catch (e) {}
+          }
+        }
+      } catch (e) {
+        controller.enqueue(enc.encode('\n\n[Generation interrupted — please try again]'));
+      }
+      controller.close();
+    },
+  });
+  return new Response(stream, {
+    status: 200,
+    headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' },
+  });
+}
+
 export default async function handler(req) {
   if (req.method === 'OPTIONS') {
     return new Response(null, {
@@ -60,6 +100,7 @@ export default async function handler(req) {
           model: 'openai/gpt-oss-120b',
           temperature: 0.4,
           max_tokens: 4096,
+          stream: true,
           messages: [{ role: 'system', content: SYSTEM_PROMPT }, { role: 'user', content: userPrompt }],
         }),
       });
@@ -67,8 +108,7 @@ export default async function handler(req) {
         const e = await res.json().catch(() => ({}));
         return json({ error: e.error ? e.error.message : 'Groq error ' + res.status }, 502);
       }
-      const data = await res.json();
-      return json({ notes: data.choices?.[0]?.message?.content || '' });
+      return streamChat(res);
     }
 
     // ── PREMIUM ROUTE (OpenAI gpt-6-luna) ──────────────
@@ -81,6 +121,7 @@ export default async function handler(req) {
         model: 'gpt-6-luna',
         max_completion_tokens: 6000,
         reasoning_effort: 'low',
+        stream: true,
         messages: [{ role: 'system', content: SYSTEM_PROMPT }, { role: 'user', content: userPrompt }],
       }),
     });
@@ -88,8 +129,7 @@ export default async function handler(req) {
       const e = await res.json().catch(() => ({}));
       return json({ error: e.error?.message || 'OpenAI error ' + res.status }, 502);
     }
-    const data = await res.json();
-    return json({ notes: data.choices?.[0]?.message?.content || '' });
+    return streamChat(res);
 
   } catch (err) {
     return json({ error: err.message || 'Unexpected error' }, 500);
