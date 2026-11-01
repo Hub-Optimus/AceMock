@@ -302,6 +302,7 @@ a{color:var(--indigo);text-decoration:none}
 .user-chip b{color:var(--text);font-weight:600;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .chip-out{border:none;background:var(--bg3);color:var(--text2);border-radius:14px;padding:4px 10px;font-size:11px;font-weight:600}
 .chip-out:hover{background:var(--red-l);color:var(--red)}
+.app-foot{text-align:center;font-size:12px;color:var(--text3,var(--text2));padding:28px 0 12px}.app-foot a{color:var(--text2);text-decoration:underline}
 
 /* ── History (Supabase) ── */.hist-link{margin-left:auto;padding:7px 14px;border-radius:9px;font-size:12.5px;font-weight:600;border:1.5px solid var(--border);color:var(--text2);background:var(--bg);display:none}
 .hist-link.show{display:inline-flex;align-items:center;gap:6px}
@@ -871,6 +872,10 @@ Works with any text — lecture notes, PDF content, chapter summaries. Minimum 3
       <div id="cv-err"></div>
     </div><!-- /tab-cv -->
 
+    <div class="app-foot">
+      <a href="https://ace-mock-ivory.vercel.app/privacy.html" target="_blank" rel="noopener">Privacy Policy</a>
+      <span id="foot-del" style="display:none"> · <a href="#" onclick="doDeleteAccount();return false">Delete account</a></span>
+    </div>
 
   </div>
 </div>
@@ -1118,10 +1123,12 @@ function handleSession(session) {
   if (currentUser) {
     document.getElementById('user-email').textContent = currentUser.email;
     chip.classList.add('show');
+    document.getElementById('foot-del').style.display = 'inline';
     if (sb) hist.classList.add('show');
     if (document.getElementById('s-auth').classList.contains('active')) show('s-setup');
   } else {
     chip.classList.remove('show');
+    document.getElementById('foot-del').style.display = 'none';
     hist.classList.remove('show');
   }
 }
@@ -1225,6 +1232,27 @@ async function doLogin() {
     authMsg(e.message || 'Login failed.');
   }
   btn.disabled = false; btn.textContent = 'Log in';
+}
+
+async function doDeleteAccount() {
+  if (!sb || !currentUser) return;
+  if (!confirm('Delete your AceMock account?\n\nThis permanently deletes your login, quiz attempts and notes. This cannot be undone.')) return;
+  try {
+    const { data } = await sb.auth.getSession();
+    const token = data && data.session && data.session.access_token;
+    if (!token) { toast('Please sign in again, then retry.'); return; }
+    const r = await fetch(`${API_BASE}/api/delete-account`, {
+      method: 'POST', headers: { 'Authorization': 'Bearer ' + token },
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || 'Could not delete account.');
+    try { await sb.auth.signOut(); } catch (e) {}
+    guestMode = false;
+    show('s-auth');
+    authMsg('Your account and data were deleted.', 'ok');
+  } catch (e) {
+    toast(e.message || 'Could not delete account.');
+  }
 }
 
 async function doSignOut() {

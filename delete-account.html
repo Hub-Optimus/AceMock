@@ -6,16 +6,49 @@ main{max-width:760px;margin:0 auto;padding:32px 16px 64px}
 h1{font-size:28px;margin:0 0 4px}h2{font-size:19px;margin:28px 0 8px}
 p,li{color:var(--fg)}.mut{color:var(--mut);font-size:14px}a{color:var(--ac)}
 .card{background:var(--card);border-radius:12px;padding:16px 20px;margin:12px 0}
-</style></head><body><main>
+</style><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>input{width:100%;padding:11px 12px;margin:6px 0 12px;border-radius:8px;border:1px solid var(--mut);background:var(--bg);color:var(--fg);font:inherit}button{padding:11px 18px;border:0;border-radius:8px;background:var(--ac);color:#fff;font:600 15px system-ui;cursor:pointer}button.danger{background:#dc2626}button:disabled{opacity:.6}#msg{margin-top:12px;font-weight:600}</style></head><body><main>
 <h1>Delete your AceMock account</h1>
 <p class="mut">AceMock · Hub Optimus</p>
-<div class="card"><p>To delete your account and data:</p>
-<ol>
-<li>Email <a href="mailto:SUPPORT_EMAIL">SUPPORT_EMAIL</a> from the email address you used to sign up.</li>
-<li>Use the subject <b>Delete my AceMock account</b>.</li>
-<li>We will confirm and delete your account within <b>30 days</b>.</li>
-</ol></div>
-<p><b>What is deleted:</b> your login, quiz attempts and scores, saved notes, and usage records.</p>
-<p><b>What may be kept:</b> nothing linked to you, except where the law requires us to keep a record.</p>
+<div class="card" id="login">
+<p>Sign in to confirm it's you, then delete your account.</p>
+<label>Email<input id="em" type="email" autocomplete="email"></label>
+<label>Password<input id="pw" type="password" autocomplete="current-password"></label>
+<button id="go" onclick="signIn()">Sign in</button>
+</div>
+<div class="card" id="confirm" style="display:none">
+<p>Signed in as <b id="who"></b>.</p>
+<p><b>This permanently deletes</b> your login, quiz attempts and scores, saved notes and usage records. It cannot be undone.</p>
+<button class="danger" id="del" onclick="doDelete()">Permanently delete my account</button>
+</div>
+<p id="msg"></p>
+<p><b>What is deleted:</b> your login, quiz attempts and scores, saved notes, and usage records. Nothing linked to you is kept.</p>
+<p>Forgot your password? Use "Forgot password" in the app first, or contact us via the developer email on our Google Play page.</p>
 <p><a href="/privacy.html">Read the full Privacy Policy</a></p>
+<script>
+const sb = window.supabase.createClient('https://dkelsqxwbqbaircknggt.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRrZWxzcXh3YnFiYWlyY2tuZ2d0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyODM1MDEsImV4cCI6MjA5Njg1OTUwMX0.WAnmiFKgpBGN3HES5y29jX3XOpHhFpgo2LiCc_Qg9Ro');
+const $ = id => document.getElementById(id);
+const say = (t, bad) => { $('msg').textContent = t; $('msg').style.color = bad ? '#dc2626' : 'inherit'; };
+async function signIn() {
+  $('go').disabled = true; say('');
+  const { data, error } = await sb.auth.signInWithPassword({ email: $('em').value.trim(), password: $('pw').value });
+  $('go').disabled = false;
+  if (error) return say(error.message, true);
+  $('who').textContent = data.user.email;
+  $('login').style.display = 'none'; $('confirm').style.display = 'block';
+}
+async function doDelete() {
+  if (!confirm('Permanently delete your AceMock account? This cannot be undone.')) return;
+  $('del').disabled = true; say('Deleting…');
+  try {
+    const { data } = await sb.auth.getSession();
+    const r = await fetch('/api/delete-account', { method: 'POST', headers: { Authorization: 'Bearer ' + data.session.access_token } });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || 'Could not delete account.');
+    await sb.auth.signOut();
+    $('confirm').style.display = 'none';
+    say('Your account and data have been deleted.');
+  } catch (e) { say(e.message, true); $('del').disabled = false; }
+}
+</script>
 </main></body></html>
