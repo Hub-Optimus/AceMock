@@ -43,7 +43,7 @@ export default async function handler(req) {
       }
 
       const groqPrompt = 'Topic: ' + topicTitle + '\n\n'
-        + (masaiText ? '=== MASAI MATERIAL ===\n' + masaiText + '\n\n' : '')
+        + (masaiText ? '=== COURSE MATERIAL ===\n' + masaiText + '\n\n' : '')
         + (transcriptText ? '=== TRANSCRIPT ===\n' + transcriptText : '')
         + '\n\nGenerate structured PM study notes. For each concept include: What it is, Why its used, Real-life examples (Indian companies preferred), How it impacts PM decisions, From the material (exact case study), Exam angle. End with a Quick Revision Table.';
 
@@ -77,7 +77,7 @@ export default async function handler(req) {
       return new Response(JSON.stringify({ error: 'ANTHROPIC_API_KEY not configured' }), { status: 500 });
     }
 
-    const systemPrompt = `You are an expert PM study notes creator for the BITSoM x Masai PM program.
+    const systemPrompt = `You are an expert study-notes creator for students and professionals.
 
 For every concept produce notes in this format:
 
@@ -93,7 +93,7 @@ For framework diagrams reproduce as ASCII. End with a QUICK REVISION TABLE. Outp
 
     const contentParts = [];
     let textBlock = 'Topic: ' + topicTitle + '\n\n';
-    if (masaiText) textBlock += '=== MASAI OFFICIAL MATERIAL ===\n' + masaiText + '\n\n';
+    if (masaiText) textBlock += '=== COURSE MATERIAL ===\n' + masaiText + '\n\n';
     if (transcriptText) textBlock += '=== LECTURE TRANSCRIPT ===\n' + transcriptText + '\n\n';
     textBlock += 'Generate comprehensive enhanced notes covering all concepts from the above material.';
     contentParts.push({ type: 'text', text: textBlock });
