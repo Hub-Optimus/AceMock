@@ -1,3 +1,4 @@
+import { guard, json } from './_guard.js';
 export const config = { maxDuration: 30 };
 
 // Scores ONE typed answer against the ideal answer for a single CV
@@ -81,7 +82,7 @@ export default async function handler(req) {
   if (req.method === 'OPTIONS') {
     return new Response(null, {
       status: 200,
-      headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST', 'Access-Control-Allow-Headers': 'Content-Type' },
+      headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST', 'Access-Control-Allow-Headers': 'Content-Type, Authorization' },
     });
   }
   if (req.method !== 'POST') {
@@ -90,6 +91,9 @@ export default async function handler(req) {
 
   try {
     const { question, idealAnswer, userAnswer, category, useGroq } = await req.json();
+    const blocked = await guard(req, { premium: !useGroq });
+    if (blocked) return blocked;
+    if (String(userAnswer || '').length > 6000 || String(idealAnswer || '').length > 6000) return json({ error: 'Answer is too long.' }, 413);
     if (!question || !userAnswer || !userAnswer.trim()) {
       return new Response(JSON.stringify({ error: 'Missing question or answer' }), { status: 400, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
     }

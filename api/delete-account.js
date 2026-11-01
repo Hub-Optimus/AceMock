@@ -6,7 +6,7 @@ export const config = { maxDuration: 30 };
 // their own Supabase access token; we only ever delete THAT user.
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://dkelsqxwbqbaircknggt.supabase.co';
-const TABLES = ['acemock_attempts', 'acemock_notes', 'acemock_usage'];
+const TABLES = ['acemock_attempts', 'acemock_notes', 'acemock_usage', 'acemock_quota', 'acemock_reports'];
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',

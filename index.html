@@ -302,6 +302,7 @@ a{color:var(--indigo);text-decoration:none}
 .user-chip b{color:var(--text);font-weight:600;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .chip-out{border:none;background:var(--bg3);color:var(--text2);border-radius:14px;padding:4px 10px;font-size:11px;font-weight:600}
 .chip-out:hover{background:var(--red-l);color:var(--red)}
+.report-btn{background:none;border:1px solid var(--border);color:var(--text3);border-radius:8px;padding:7px 12px;font-size:12px;cursor:pointer}.report-btn:hover{color:var(--text2)}
 .app-foot{text-align:center;font-size:12px;color:var(--text3,var(--text2));padding:28px 0 12px}.app-foot a{color:var(--text2);text-decoration:underline}
 
 /* ── History (Supabase) ── */.hist-link{margin-left:auto;padding:7px 14px;border-radius:9px;font-size:12.5px;font-weight:600;border:1.5px solid var(--border);color:var(--text2);background:var(--bg);display:none}
@@ -510,7 +511,6 @@ a{color:var(--indigo);text-decoration:none}
       <button class="auth-secondary" id="signup-btn" onclick="doSignup()">Create account</button>
     </div>
     <div class="auth-msg" id="auth-msg"></div>
-    <div class="auth-guest">or <a onclick="continueGuest()">continue without an account</a> — attempts won't be saved</div>
   </div>
 </div>
 
@@ -659,12 +659,12 @@ Works with any text — lecture notes, PDF content, chapter summaries. Minimum 3
       <span class="cfg-label">AI Model for Quiz</span>
       <div class="model-selector-row">
         <button class="model-btn" id="quiz-claude-btn" onclick="selectQuizModel('claude')">
-          🧠 OpenAI <span style="font-size:10px;padding:1px 5px;background:var(--indigo-l);color:var(--indigo);border-radius:4px;font-weight:700">Paid</span>
-          <div style="font-size:10px;font-weight:400;color:var(--text3);margin-top:2px">Best quality · ~$0.04/session</div>
+          🧠 OpenAI <span style="font-size:10px;padding:1px 5px;background:var(--indigo-l);color:var(--indigo);border-radius:4px;font-weight:700">Premium</span>
+          <div style="font-size:10px;font-weight:400;color:var(--text3);margin-top:2px">Best quality · limited per day</div>
         </button>
         <button class="model-btn active-groq" id="quiz-groq-btn" onclick="selectQuizModel('groq')">
-          ⚡ Groq (Llama) <span style="font-size:10px;padding:1px 5px;background:var(--cyan-l);color:var(--cyan);border-radius:4px;font-weight:700">Free</span>
-          <div style="font-size:10px;font-weight:400;color:var(--text3);margin-top:2px">Good quality · $0 cost</div>
+          ⚡ Groq (Free) <span style="font-size:10px;padding:1px 5px;background:var(--cyan-l);color:var(--cyan);border-radius:4px;font-weight:700">Free</span>
+          <div style="font-size:10px;font-weight:400;color:var(--text3);margin-top:2px">Good quality · Free</div>
         </button>
       </div>
     </div>
@@ -748,12 +748,12 @@ Works with any text — lecture notes, PDF content, chapter summaries. Minimum 3
         <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.3px;margin-bottom:6px">AI Model for Notes</div>
         <div class="model-selector-row">
           <button class="model-btn active-claude" id="model-claude-btn" onclick="selectNotesModel('claude')">
-            🧠 Claude Sonnet <span style="font-size:10px;padding:1px 5px;background:var(--violet-l);color:var(--violet);border-radius:4px;font-weight:700">Recommended</span>
-            <div style="font-size:10px;font-weight:400;color:var(--text3);margin-top:2px">Best quality · ~$0.11/session</div>
+            🧠 OpenAI <span style="font-size:10px;padding:1px 5px;background:var(--violet-l);color:var(--violet);border-radius:4px;font-weight:700">Recommended</span>
+            <div style="font-size:10px;font-weight:400;color:var(--text3);margin-top:2px">Best quality · limited per day</div>
           </button>
           <button class="model-btn" id="model-groq-btn" onclick="selectNotesModel('groq')">
-            ⚡ Groq (Llama) <span style="font-size:10px;padding:1px 5px;background:var(--cyan-l);color:var(--cyan);border-radius:4px;font-weight:700">Free</span>
-            <div style="font-size:10px;font-weight:400;color:var(--text3);margin-top:2px">Good quality · $0 cost</div>
+            ⚡ Groq (Free) <span style="font-size:10px;padding:1px 5px;background:var(--cyan-l);color:var(--cyan);border-radius:4px;font-weight:700">Free</span>
+            <div style="font-size:10px;font-weight:400;color:var(--text3);margin-top:2px">Good quality · Free</div>
           </button>
         </div>
       </div>
@@ -781,6 +781,7 @@ Works with any text — lecture notes, PDF content, chapter summaries. Minimum 3
           </div>
         </div>
         <div class="notes-body" id="notes-body"></div>
+        <div style="text-align:center;margin-top:10px"><button class="report-btn" onclick="reportContent('notes')">⚑ Report this content</button></div>
       </div>
       <div id="notes-err"></div>
     </div><!-- /tab-notes -->
@@ -821,12 +822,12 @@ Works with any text — lecture notes, PDF content, chapter summaries. Minimum 3
         <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.3px;margin-bottom:6px">AI Model</div>
         <div class="model-selector-row">
           <button class="model-btn active-claude" id="cv-model-openai-btn" onclick="selectCVModel('openai')">
-            🧠 OpenAI GPT-5 <span style="font-size:10px;padding:1px 5px;background:var(--violet-l);color:var(--violet);border-radius:4px;font-weight:700">Recommended</span>
-            <div style="font-size:10px;font-weight:400;color:var(--text3);margin-top:2px">Best quality · ~$0.05/session</div>
+            🧠 OpenAI <span style="font-size:10px;padding:1px 5px;background:var(--violet-l);color:var(--violet);border-radius:4px;font-weight:700">Recommended</span>
+            <div style="font-size:10px;font-weight:400;color:var(--text3);margin-top:2px">Best quality · limited per day</div>
           </button>
           <button class="model-btn" id="cv-model-groq-btn" onclick="selectCVModel('groq')">
-            ⚡ Groq (Llama) <span style="font-size:10px;padding:1px 5px;background:var(--cyan-l);color:var(--cyan);border-radius:4px;font-weight:700">Free</span>
-            <div style="font-size:10px;font-weight:400;color:var(--text3);margin-top:2px">Good quality · $0 cost</div>
+            ⚡ Groq (Free) <span style="font-size:10px;padding:1px 5px;background:var(--cyan-l);color:var(--cyan);border-radius:4px;font-weight:700">Free</span>
+            <div style="font-size:10px;font-weight:400;color:var(--text3);margin-top:2px">Good quality · Free</div>
           </button>
         </div>
       </div>
@@ -874,6 +875,7 @@ Works with any text — lecture notes, PDF content, chapter summaries. Minimum 3
 
     <div class="app-foot">
       <a href="https://ace-mock-ivory.vercel.app/privacy.html" target="_blank" rel="noopener">Privacy Policy</a>
+      <span id="foot-rep" style="display:none"> · <a href="#" onclick="reportContent('general');return false">Report AI content</a></span>
       <span id="foot-del" style="display:none"> · <a href="#" onclick="doDeleteAccount();return false">Delete account</a></span>
     </div>
 
@@ -968,6 +970,7 @@ Works with any text — lecture notes, PDF content, chapter summaries. Minimum 3
       <span class="review-count" id="r-review-count"></span>
     </div>
     <div id="review-list"></div>
+    <div style="text-align:center;margin:14px 0"><button class="report-btn" onclick="reportContent('quiz')">⚑ Report a problem with these questions</button></div>
   </div>
 </div>
 
@@ -1007,7 +1010,7 @@ Works with any text — lecture notes, PDF content, chapter summaries. Minimum 3
 <div class="veil" id="notes-quiz-veil" onclick="if(event.target===this)closeNotesQuizModal()">
   <div class="modal">
     <div class="modal-title">Set up your quiz</div>
-    <div class="modal-sub">Choose style and model before generating — questions cost API credits.</div>
+    <div class="modal-sub">Choose style and model before generating. Premium has a daily limit; Groq is free.</div>
 
     <div style="margin-bottom:14px">
       <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.3px;margin-bottom:8px">Question Style</div>
@@ -1027,12 +1030,12 @@ Works with any text — lecture notes, PDF content, chapter summaries. Minimum 3
       <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.3px;margin-bottom:8px">AI Model</div>
       <div style="display:flex;gap:8px">
         <button class="model-btn" id="nq-claude-btn" onclick="setNqModel('claude')" style="flex:1">
-          🧠 OpenAI <span style="font-size:10px;padding:1px 5px;background:var(--indigo-l);color:var(--indigo);border-radius:4px;font-weight:700">Paid</span>
-          <div style="font-size:10px;font-weight:400;color:var(--text3);margin-top:2px">Best quality · ~$0.04</div>
+          🧠 OpenAI <span style="font-size:10px;padding:1px 5px;background:var(--indigo-l);color:var(--indigo);border-radius:4px;font-weight:700">Premium</span>
+          <div style="font-size:10px;font-weight:400;color:var(--text3);margin-top:2px">Best quality · limited per day</div>
         </button>
         <button class="model-btn active-groq" id="nq-groq-btn" onclick="setNqModel('groq')" style="flex:1">
-          ⚡ Groq (Llama) <span style="font-size:10px;padding:1px 5px;background:var(--cyan-l);color:var(--cyan);border-radius:4px;font-weight:700">Free</span>
-          <div style="font-size:10px;font-weight:400;color:var(--text3);margin-top:2px">Good quality · $0 cost</div>
+          ⚡ Groq (Free) <span style="font-size:10px;padding:1px 5px;background:var(--cyan-l);color:var(--cyan);border-radius:4px;font-weight:700">Free</span>
+          <div style="font-size:10px;font-weight:400;color:var(--text3);margin-top:2px">Good quality · Free</div>
         </button>
       </div>
     </div>
@@ -1051,6 +1054,16 @@ Works with any text — lecture notes, PDF content, chapter summaries. Minimum 3
 // so calls must go to the full Vercel domain instead. Capacitor
 // injects window.Capacitor automatically at build time — nothing to
 // add manually. Replace the URL below with your real Vercel domain.
+async function apiHeaders() {
+  const h = { 'Content-Type': 'application/json' };
+  try {
+    const { data } = await sb.auth.getSession();
+    const t = data && data.session && data.session.access_token;
+    if (t) h['Authorization'] = 'Bearer ' + t;
+  } catch (e) {}
+  return h;
+}
+
 const API_BASE = (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform())
   ? 'https://ace-mock-ivory.vercel.app'
   : '';
@@ -1124,11 +1137,13 @@ function handleSession(session) {
     document.getElementById('user-email').textContent = currentUser.email;
     chip.classList.add('show');
     document.getElementById('foot-del').style.display = 'inline';
+    document.getElementById('foot-rep').style.display = 'inline';
     if (sb) hist.classList.add('show');
     if (document.getElementById('s-auth').classList.contains('active')) show('s-setup');
   } else {
     chip.classList.remove('show');
     document.getElementById('foot-del').style.display = 'none';
+    document.getElementById('foot-rep').style.display = 'none';
     hist.classList.remove('show');
   }
 }
@@ -1260,12 +1275,6 @@ async function doSignOut() {
   guestMode = false;
   show('s-auth');
   authMsg('Signed out.', 'ok');
-}
-
-function continueGuest() {
-  guestMode = true;
-  show('s-setup');
-  toast('Guest mode — attempts will not be saved');
 }
 
 // ── Refresh warning while progress exists ─────────────
@@ -1833,7 +1842,7 @@ ${sampleContent(content)}`;
 
   const res = await fetch(`${API_BASE}/api/generate`, {
     method: 'POST',
-    headers: {'Content-Type': 'application/json'},
+    headers: await apiHeaders(),
     body: JSON.stringify({
       system: systemPrompt,
       user: userPrompt,
@@ -2857,7 +2866,7 @@ async function generateNotes() {
 
     const res = await fetch(`${API_BASE}/api/notes`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await apiHeaders(),
       body: JSON.stringify({
         sources: combinedSources,
         topicTitle: topic,
@@ -2997,7 +3006,7 @@ async function generateCVInterview() {
   try {
     const res = await fetch(`${API_BASE}/api/cv-interview`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await apiHeaders(),
       body: JSON.stringify({ cvText, targetRole, useGroq: cvModel === 'groq' })
     });
     if (!res.ok) {
@@ -3105,7 +3114,7 @@ async function getCVFeedback() {
   try {
     const res = await fetch(`${API_BASE}/api/cv-feedback`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await apiHeaders(),
       body: JSON.stringify({
         question: q.question,
         idealAnswer: q.answer,
@@ -3172,63 +3181,23 @@ async function deleteSavedNote(id) {
   }
 }
 
-// ── Credit tracker ───────────────────────────────────
-// Tracks estimated API spend locally in Supabase
-// Sonnet: input $3/M, output $15/M | Haiku: input $0.8/M, output $4/M
-const CREDIT_BUDGET = 5.00; // update when you top up
-const SONNET_IN = 3.00 / 1_000_000, SONNET_OUT = 15.00 / 1_000_000;
-const HAIKU_IN  = 0.80 / 1_000_000, HAIKU_OUT  =  4.00 / 1_000_000;
-const TOKENS_PER_CHAR = 0.25; // ~4 chars per token
 
-let totalSpent = 0;
-
-async function loadCreditHistory() {
-  if (!sb || !currentUser) return;
+// ── Report AI content (Play policy: in-app reporting) ──
+async function reportContent(kind) {
+  if (!sb || !currentUser) { toast('Please log in first.'); return; }
+  let sample = '';
+  if (kind === 'quiz') sample = (questions || []).slice(0, 5).map(q => q.question).join(' | ');
+  else if (kind === 'notes') sample = (typeof notesText === 'string' ? notesText : '').slice(0, 1500);
+  if (!confirm('Report this AI-generated content as inaccurate, offensive or unsafe?\n\nThe developer will review it.')) return;
   try {
-    const { data } = await sb.from('acemock_usage')
-      .select('cost')
-      .eq('user_id', currentUser.id);
-    if (data) totalSpent = data.reduce((s, r) => s + (r.cost || 0), 0);
-    renderCreditBar();
-  } catch(e) {}
-}
-
-function trackUsage(type, inputChars) {
-  // Estimate tokens and cost
-  const inputTokens  = Math.ceil(inputChars * TOKENS_PER_CHAR) + 500; // +500 for system prompt
-  const outputTokens = 4096;
-  let cost = 0;
-  if (type === 'notes') {
-    cost = (inputTokens * SONNET_IN) + (outputTokens * SONNET_OUT);
-  } else {
-    // quiz = 2 Haiku calls
-    cost = 2 * ((inputTokens * HAIKU_IN) + (outputTokens * HAIKU_OUT));
+    const { error } = await sb.from('acemock_reports').insert({
+      user_id: currentUser.id, kind, sample: String(sample).slice(0, 2000)
+    });
+    if (error) throw error;
+    toast('Thanks — report sent.');
+  } catch (e) {
+    toast('Could not send report. Please try again later.');
   }
-  totalSpent += cost;
-  renderCreditBar();
-  // Save to Supabase async (fire and forget)
-  if (sb && currentUser) {
-    sb.from('acemock_usage').insert({
-      user_id: currentUser.id,
-      type,
-      cost,
-      created_at: new Date().toISOString()
-    }).then(() => {}).catch(() => {});
-  }
-}
-
-function renderCreditBar() {
-  const bar = document.getElementById('credit-bar');
-  const fill = document.getElementById('credit-fill');
-  const label = document.getElementById('credit-label');
-  if (!bar || !currentUser) return;
-  bar.style.display = 'flex';
-  const remaining = Math.max(0, CREDIT_BUDGET - totalSpent);
-  const pct = (remaining / CREDIT_BUDGET) * 100;
-  fill.style.width = pct + '%';
-  fill.style.background = pct > 40 ? 'var(--green)' : pct > 15 ? 'var(--amber)' : 'var(--red)';
-  label.textContent = `$${remaining.toFixed(2)} left`;
-  bar.className = 'credit-bar' + (pct <= 15 ? ' danger' : pct <= 40 ? ' warn' : '');
 }
 
 // Track notes generation usage
@@ -3442,7 +3411,6 @@ function quizFromNote(id) {
 
 // Boot: decide between login screen and the app
 initAuth();
-setTimeout(() => loadCreditHistory(), 1500); // load after auth settles
 </script>
 </body>
 </html>

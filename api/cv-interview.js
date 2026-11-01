@@ -1,3 +1,4 @@
+import { guard, json } from './_guard.js';
 export const config = { maxDuration: 60 };
 
 // Generating 30-50 questions in one giant AI call was the original cause of
@@ -116,7 +117,7 @@ export default async function handler(req) {
   if (req.method === 'OPTIONS') {
     return new Response(null, {
       status: 200,
-      headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST', 'Access-Control-Allow-Headers': 'Content-Type' },
+      headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST', 'Access-Control-Allow-Headers': 'Content-Type, Authorization' },
     });
   }
   if (req.method !== 'POST') {
@@ -125,6 +126,9 @@ export default async function handler(req) {
 
   try {
     const { cvText, targetRole, useGroq } = await req.json();
+    const blocked = await guard(req, { premium: !useGroq });
+    if (blocked) return blocked;
+    if (cvText && cvText.length > 40000) return json({ error: 'CV text is too long.' }, 413);
     if (!cvText || cvText.trim().length < 50) {
       return new Response(JSON.stringify({ error: 'CV text is too short or missing' }), { status: 400 });
     }

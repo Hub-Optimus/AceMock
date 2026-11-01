@@ -1,10 +1,11 @@
+import { guard, json } from './_guard.js';
 export const config = { runtime: 'edge' };
 
 export default async function handler(req) {
   if (req.method === 'OPTIONS') {
     return new Response(null, {
       status: 200,
-      headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST', 'Access-Control-Allow-Headers': 'Content-Type' },
+      headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST', 'Access-Control-Allow-Headers': 'Content-Type, Authorization' },
     });
   }
   if (req.method !== 'POST') {
@@ -14,6 +15,9 @@ export default async function handler(req) {
   try {
     const { system, user, max_tokens, useGroq } = await req.json();
     if (!user) return new Response(JSON.stringify({ error: 'Missing content' }), { status: 400 });
+    if (String(user).length > 90000 || String(system || '').length > 20000) return json({ error: 'Input is too large. Please use a smaller section.' }, 413);
+    const blocked = await guard(req, { premium: !useGroq });
+    if (blocked) return blocked;
 
     // useGroq=true → free Groq, false → OpenAI gpt-6-luna (paid, better quality)
     if (useGroq) {
@@ -26,7 +30,7 @@ export default async function handler(req) {
         body: JSON.stringify({
           model: 'openai/gpt-oss-120b',
           temperature: 0.5,
-          max_tokens: max_tokens || 4096,
+          max_tokens: Math.min(max_tokens || 4096, 8192),
           response_format: { type: 'json_object' },
           messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
         }),
@@ -52,7 +56,7 @@ export default async function handler(req) {
         headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model: 'gpt-6-luna',
-          max_completion_tokens: max_tokens || 4096,
+          max_completion_tokens: Math.min(max_tokens || 4096, 8192),
           reasoning_effort: 'low',
           response_format: { type: 'json_object' },
           messages: [{ role: 'system', content: system }, { role: 'user', content: openaiUser }],
